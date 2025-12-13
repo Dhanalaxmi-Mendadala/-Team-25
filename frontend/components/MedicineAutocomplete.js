@@ -25,7 +25,6 @@ const MedicineAutocomplete = ({ onAddMedicine }) => {
 
     // Entry Mode State (when a medicine is selected)
     const [selectedMed, setSelectedMed] = useState(null);
-    const [dosage, setDosage] = useState('');
     const [frequency, setFrequency] = useState('');
     const [duration, setDuration] = useState('5'); // Default 5 days
     const [durationUnit, setDurationUnit] = useState('Days'); // Days | Weeks
@@ -60,10 +59,11 @@ const MedicineAutocomplete = ({ onAddMedicine }) => {
                         const mappedResults = apiResults.map((item, index) => ({
                             id: `api_${index}_${item.name}`,
                             name: item.name,
-                            type: item.type || 'Medicine',
+                            type: item.category || 'Medicine',
                             // Add metadata for display
                             manufacturer: item.manufacturer,
-                            composition: item.composition
+                            category: item.category,
+                            strength: item.strength
                         }));
                         setSuggestions(mappedResults);
                     } else {
@@ -98,10 +98,6 @@ const MedicineAutocomplete = ({ onAddMedicine }) => {
         setSuggestions([]); // Hide suggestions
         setIsSearching(false);
         Keyboard.dismiss();
-
-        // Defaults based on type could go here
-        if (med.type === 'Syrup') setDosage('5ml');
-        else setDosage('500mg');
     };
 
     // Clear everything
@@ -110,7 +106,6 @@ const MedicineAutocomplete = ({ onAddMedicine }) => {
         setSelectedMed(null);
         setQuery('');
         setSuggestions([]);
-        setDosage('');
         setFrequency('');
         setDuration('5');
         setNotes('');
@@ -121,18 +116,14 @@ const MedicineAutocomplete = ({ onAddMedicine }) => {
         if (!selectedMed) return;
 
         // Basic validation
-        if (!dosage || !frequency) {
-            // alert or shake? simple approach:
-            // Just let them add partial info? No, consistency.
-            // But let's be fast. Default dosage if empty?
-            // Actually, let's just add it.
+        if (!frequency) {
+            // Just let them add partial info for flexibility
         }
 
         const finalDuration = duration ? `${duration} ${durationUnit}` : '';
 
         onAddMedicine({
             ...selectedMed,
-            dosage: dosage || 'As Prescribed',
             frequency: frequency || 'SOS',
             duration: finalDuration,
             notes
@@ -181,7 +172,7 @@ const MedicineAutocomplete = ({ onAddMedicine }) => {
                             <View style={{ flex: 1 }}>
                                 <Text style={styles.suggestionText}>{item.name}</Text>
                                 <Text style={styles.suggestionType} numberOfLines={1}>
-                                    {item.composition || item.manufacturer || item.type}
+                                    {item.manufacturer || item.category || item.type}
                                 </Text>
                             </View>
                         </TouchableOpacity>
@@ -202,32 +193,6 @@ const MedicineAutocomplete = ({ onAddMedicine }) => {
             {/* 3. Expanded Entry Card (Visible only when medicine selected) */}
             {selectedMed && (
                 <View style={styles.entryCard}>
-                    {/* Dosage Section */}
-                    <View style={styles.section}>
-                        <Text style={styles.sectionLabel}>Dosage</Text>
-                        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipsScroll}>
-                            {COMMON_DOSAGES.map(d => (
-                                <TouchableOpacity
-                                    key={d}
-                                    style={[styles.chip, dosage === d && styles.chipActive]}
-                                    onPress={() => setDosage(d)}
-                                >
-                                    <Text style={[styles.chipText, dosage === d && styles.chipTextActive]}>{d}</Text>
-                                </TouchableOpacity>
-                            ))}
-                            {/* Manual Input Chip */}
-                            <TouchableOpacity style={[styles.chip, styles.inputChip]}>
-                                <TextInput
-                                    placeholder="Custom"
-                                    value={COMMON_DOSAGES.includes(dosage) ? '' : dosage}
-                                    onChangeText={setDosage}
-                                    style={styles.chipInput}
-                                    placeholderTextColor={COLORS.muted}
-                                />
-                            </TouchableOpacity>
-                        </ScrollView>
-                    </View>
-
                     {/* Frequency Section */}
                     <View style={styles.section}>
                         <Text style={styles.sectionLabel}>Frequency</Text>

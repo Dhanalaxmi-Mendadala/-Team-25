@@ -12,7 +12,7 @@ def download_medicine_dataset():
     kaggle_key = os.getenv('KAGGLE_KEY')
     
     if not kaggle_username or not kaggle_key:
-        print("Error: KAGGLE_USERNAME and KAGGLE_KEY must be set in .env file") the .env file:")
+        print("Error: KAGGLE_USERNAME and KAGGLE_KEY must be set in .env file")
         print("  KAGGLE_USERNAME=your_username")
         print("  KAGGLE_KEY=your_api_key")
         return
@@ -37,7 +37,7 @@ def download_medicine_dataset():
     # Or 'saurabhshahane/drugs-and-medicines-dataset'
     # Let's try to search for the best match or hardcode one. 
     # The '1mg' one is usually good: 'shwetbajpai/medicine-dataset' (Medicine Data from 1mg.com)
-    dataset = 'shwetbajpai/medicine-dataset'
+    dataset = 'ujjwalaggarwal402/medicine-dataset'
     
     print(f"Downloading {dataset}...")
     try:

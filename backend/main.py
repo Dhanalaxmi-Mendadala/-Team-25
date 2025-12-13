@@ -60,15 +60,13 @@ def load_medicine_data():
             if name_col:
                 # Rename to 'name' for consistency
                 df = df.rename(columns={name_col: 'name'})
-                # specific to 1mg dataset often used
-                if 'salt_composition' in df.columns:
-                     df = df.rename(columns={'salt_composition': 'composition'})
                 
-                # Keep reasonably small
-                keep_cols = ['name', 'composition', 'manufacturer', 'price', 'short_composition1', 'short_composition2']
+                # Keep relevant columns from the dataset
+                keep_cols = ['name', 'category', 'dosage form', 'strength', 'manufacturer', 'indication', 'classification']
                 actual_cols = [c for c in keep_cols if c in df.columns]
                 # Always ensure name is there
-                if 'name' not in actual_cols: actual_cols.append('name')
+                if 'name' not in actual_cols: 
+                    actual_cols.append('name')
                 
                 MEDICINE_DB = df[actual_cols].dropna(subset=['name'])
                 # Convert name to string just in case
@@ -105,10 +103,12 @@ def search_medicines(q: str):
         response = []
         for _, row in results.iterrows():
             item = {"name": row['name']}
-            if 'composition' in row:
-                item['composition'] = row['composition'] if isinstance(row['composition'], str) else ""
             if 'manufacturer' in row:
-                 item['manufacturer'] = row['manufacturer'] if isinstance(row['manufacturer'], str) else ""
+                item['manufacturer'] = row['manufacturer'] if isinstance(row['manufacturer'], str) else ""
+            if 'category' in row:
+                item['category'] = row['category'] if isinstance(row['category'], str) else ""
+            if 'strength' in row:
+                item['strength'] = row['strength'] if isinstance(row['strength'], str) and not (isinstance(row['strength'], float) and math.isnan(row['strength'])) else ""
             response.append(item)
             
         return response
@@ -126,14 +126,40 @@ async def analyze_prescription(request: PrescriptionRequest):
         if not request.text:
             raise HTTPException(status_code=400, detail="Prescription text is required")
         
+        # Validate that the text has some meaningful content
+        if len(request.text.strip()) < 10:
+            raise HTTPException(status_code=400, detail="Prescription text is too short")
+        
+        # Call AI service
         result = analyze_prescription_text(request.text)
-        print(result)
+        
+        # Check if AI returned an error
+        if result.get("error"):
+            error_msg = result.get("error", "Unknown error")
+            print(f"AI Analysis Error: {error_msg}")
+            
+            # Return a user-friendly error response
+            return {
+                "error": True,
+                "message": f"AI Analysis failed: {error_msg}",
+                "score": 0,
+                "evaluation": {
+                    "completeness": 0,
+                    "safety": 0,
+                    "ambiguity": "high",
+                    "overall_rating": "Error"
+                },
+                "structured_prescription": []
+            }
+        
+        print(f"Analysis successful: Score={result.get('score', 'N/A')}")
         return result
+        
+    except HTTPException:
+        raise
     except Exception as e:
-        # In a real app, log the error
         print(f"Error processing prescription: {e}")
-        # Return a 500 or appropriate error, passing the message for debugging if needed
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=f"Server error: {str(e)}")
 
 from fastapi.responses import StreamingResponse
 from pdf_service import generate_prescription_pdf

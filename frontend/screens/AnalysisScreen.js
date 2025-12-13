@@ -173,6 +173,35 @@ const AnalysisScreen = ({ route, navigation }) => {
                     </View>
                 </View>
 
+
+                {/* Summary Section - New */}
+                {analysis.summary && (
+                    <View style={styles.summaryCard}>
+                        <Text style={styles.summaryTitle}>📋 Analysis Summary</Text>
+                        <Text style={styles.summaryText}>{analysis.summary}</Text>
+                    </View>
+                )}
+
+                {/* Drug Interactions Warning - New */}
+                {analysis.drug_interactions && analysis.drug_interactions.length > 0 && (
+                    <View style={styles.interactionsCard}>
+                        <Text style={styles.interactionsTitle}>⚠️ Drug Interactions</Text>
+                        {analysis.drug_interactions.map((interaction, idx) => (
+                            <Text key={idx} style={styles.interactionText}>• {interaction}</Text>
+                        ))}
+                    </View>
+                )}
+
+                {/* Recommendations Section - New */}
+                {analysis.recommendations && analysis.recommendations.length > 0 && (
+                    <View style={styles.recommendationsCard}>
+                        <Text style={styles.recommendationsTitle}>💡 Recommendations</Text>
+                        {analysis.recommendations.map((rec, idx) => (
+                            <Text key={idx} style={styles.recommendationText}>• {rec}</Text>
+                        ))}
+                    </View>
+                )}
+
                 {/* Detailed Analysis */}
                 <View style={styles.section}>
                     <Text style={styles.sectionHeader}>Prescription Breakdown</Text>
@@ -183,12 +212,15 @@ const AnalysisScreen = ({ route, navigation }) => {
                             <View key={index} style={styles.medItem}>
                                 <View style={styles.medHeader}>
                                     <Text style={styles.medName}>{med.medicine_name}</Text>
-                                    <Text style={styles.medDose}>{med.strength}</Text>
+                                    {med.strength && <Text style={styles.medDose}>{med.strength}</Text>}
                                 </View>
+                                {med.formulation && (
+                                    <Text style={styles.medFormulation}>📦 {med.formulation}</Text>
+                                )}
                                 <View style={styles.tagRow}>
-                                    <View style={styles.tag}><Text style={styles.tagText}>{med.frequency}</Text></View>
-                                    <View style={styles.tag}><Text style={styles.tagText}>{med.timing}</Text></View>
-                                    <View style={styles.tag}><Text style={styles.tagText}>{med.duration}</Text></View>
+                                    {med.frequency && <View style={styles.tag}><Text style={styles.tagText}>{med.frequency}</Text></View>}
+                                    {med.timing && <View style={styles.tag}><Text style={styles.tagText}>{med.timing}</Text></View>}
+                                    {med.duration && <View style={styles.tag}><Text style={styles.tagText}>{med.duration}</Text></View>}
                                 </View>
                                 {med.warnings && med.warnings.length > 0 && (
                                     <View style={styles.warningBox}>

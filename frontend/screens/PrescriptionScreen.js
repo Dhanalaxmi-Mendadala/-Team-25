@@ -219,7 +219,7 @@ const PrescriptionScreen = ({ navigation }) => {
             </View>
             <View style={{ flex: 1, marginLeft: 15 }}>
                 <Text style={styles.medName}>{item.name}</Text>
-                <Text style={styles.medDetails}>{item.dosage} • {item.frequency} • {item.duration}</Text>
+                <Text style={styles.medDetails}>{item.frequency} • {item.duration}</Text>
                 {item.notes ? <Text style={styles.medNotes}>📝 {item.notes}</Text> : null}
             </View>
             <TouchableOpacity onPress={() => removeMedicine(item.id)} style={styles.deleteButton}>
