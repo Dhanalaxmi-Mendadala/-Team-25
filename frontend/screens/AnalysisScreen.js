@@ -23,6 +23,7 @@ const AnalysisScreen = ({ route, navigation }) => {
     const [analysis, setAnalysis] = useState(null);
     const [loading, setLoading] = useState(true);
     const [exporting, setExporting] = useState(false);
+    const [showDebug, setShowDebug] = useState(false);
 
     useEffect(() => {
         const fetchAnalysis = async () => {
@@ -134,6 +135,13 @@ const AnalysisScreen = ({ route, navigation }) => {
             <ScrollView contentContainerStyle={styles.scrollContent}>
                 <Text style={styles.headerTitle}>Analysis Report</Text>
 
+                {data.diagnosis && (
+                    <View style={styles.diagnosisBox}>
+                        <Text style={styles.diagnosisLabel}>Diagnosis Provided:</Text>
+                        <Text style={styles.diagnosisText}>{data.diagnosis}</Text>
+                    </View>
+                )}
+
                 {/* Score Dashboard */}
                 <View style={styles.scoreCard}>
                     <View style={[styles.scoreRing, { borderColor: getScoreColor(score) }]}>
@@ -198,8 +206,19 @@ const AnalysisScreen = ({ route, navigation }) => {
                     </TouchableOpacity>
                 </View>
 
+                {/* Debug / Raw Output Section */}
+                <TouchableOpacity onPress={() => setShowDebug(!showDebug)} style={styles.debugToggle}>
+                    <Text style={styles.debugToggleText}>{showDebug ? "Hide Raw Data" : "Show Raw AI Response"}</Text>
+                </TouchableOpacity>
+
+                {showDebug && (
+                    <View style={styles.debugContainer}>
+                        <Text style={styles.debugText}>{JSON.stringify(analysis, null, 2)}</Text>
+                    </View>
+                )}
+
             </ScrollView>
-        </SafeAreaView>
+        </SafeAreaView >
     );
 };
 
@@ -402,6 +421,48 @@ const styles = StyleSheet.create({
         color: COLORS.primary,
         fontSize: 16,
         fontWeight: 'bold',
+    },
+    diagnosisBox: {
+        backgroundColor: '#E3F2FD',
+        padding: 15,
+        borderRadius: 12,
+        marginBottom: 20,
+        borderLeftWidth: 4,
+        borderLeftColor: COLORS.info
+    },
+    diagnosisLabel: {
+        fontSize: 12,
+        color: COLORS.secondary,
+        fontWeight: 'bold',
+        textTransform: 'uppercase',
+        marginBottom: 4
+    },
+    diagnosisText: {
+        fontSize: 15,
+        color: COLORS.dark,
+        fontStyle: 'italic'
+    },
+    debugToggle: {
+        alignItems: 'center',
+        padding: 10,
+        marginBottom: 10
+    },
+    debugToggleText: {
+        color: COLORS.secondary,
+        textDecorationLine: 'underline',
+        fontSize: 12
+    },
+    debugContainer: {
+        backgroundColor: '#f0f0f0',
+        padding: 15,
+        borderRadius: 8,
+        marginTop: 5,
+        marginBottom: 20
+    },
+    debugText: {
+        fontFamily: 'monospace',
+        fontSize: 10,
+        color: '#333'
     }
 });
 

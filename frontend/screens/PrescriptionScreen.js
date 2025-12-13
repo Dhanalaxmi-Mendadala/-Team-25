@@ -108,7 +108,9 @@ const PrescriptionScreen = ({ navigation }) => {
 
         if (!result.success) {
             const fieldErrors = {};
-            result.error.errors.forEach(err => {
+            // Use issues or errors depending on Zod version/environment
+            const zodErrors = result.error.issues || result.error.errors || [];
+            zodErrors.forEach(err => {
                 if (err.path[0]) fieldErrors[err.path[0]] = err.message;
             });
             setErrors(fieldErrors);

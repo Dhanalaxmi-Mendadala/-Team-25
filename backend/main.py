@@ -33,6 +33,7 @@ async def analyze_prescription(request: PrescriptionRequest):
             raise HTTPException(status_code=400, detail="Prescription text is required")
         
         result = analyze_prescription_text(request.text)
+        print(result)
         return result
     except Exception as e:
         # In a real app, log the error

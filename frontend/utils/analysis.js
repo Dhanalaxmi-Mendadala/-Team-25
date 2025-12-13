@@ -4,11 +4,12 @@ import { API_BASE_URL } from '../constants/config';
 
 export const analyzePrescriptionWithAI = async (data) => {
     try {
-        const { medicines, vitals, patient } = data;
+        const { medicines, vitals, patient, diagnosis } = data;
 
         // 1. Convert structured data to natural language text for the AI
         let promptText = `Patient: ${patient.name}, ${patient.age}, ${patient.sex}. `;
         promptText += `Vitals: Temp ${vitals.temperature}, BP ${vitals.bp}, Weight ${vitals.weight}, Pulse ${vitals.pulse}. `;
+        if (diagnosis) promptText += `Diagnosis: ${diagnosis}. `;
         promptText += `Medicines: `;
         medicines.forEach(m => {
             promptText += `${m.name} ${m.dosage || ''} ${m.frequency || ''} ${m.duration || ''} (${m.notes || ''}) | `;

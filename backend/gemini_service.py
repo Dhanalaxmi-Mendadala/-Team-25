@@ -9,6 +9,9 @@ API_KEY = os.getenv("Gemini_AI_API_KEY")
 if not API_KEY:
     raise ValueError("Gemini_AI_API_KEY not found in .env")
 
+# DEBUG: Print first 5 chars of key to verify it changed
+print(f"DEBUG: Loaded API Key starting with: {API_KEY[:5]}...")
+
 genai.configure(api_key=API_KEY)
 
 # Generation config to enforce JSON response
@@ -60,6 +63,8 @@ def analyze_prescription_text(text: str) -> dict:
        - Expand shorthand medicine names into full names if known.
        - Fill in missing dosage, frequency, timing, and duration if inferred from context, otherwise mark as "unknown" or leave blank appropriately.
        - Add warnings if medicine is unknown or dose seems unsafe.
+       - If a 'Diagnosis' is provided in the text, use it to cross-check the prescribed medicines. Add warnings if a medicine seems contraindicated for the diagnosis or unrelated.
+       - If 'Diagnosis' is present, check for standard treatments associated with it and consider this in the completeness score.
        - Respond ONLY in JSON.
        - Maintain field names exactly as specified.
     """
