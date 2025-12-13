@@ -1,0 +1,51 @@
+name,composition,manufacturer,type,pack_size
+Paracetamol 500mg,Paracetamol (500mg),Generic Pharma,Tablet,10 tablets
+Paracetamol 650mg,Paracetamol (650mg),Generic Pharma,Tablet,15 tablets
+Ibuprofen 400mg,Ibuprofen (400mg),Pain Relief Inc,Tablet,10 tablets
+Amoxicillin 500mg,Amoxicillin (500mg),Antibiotic Labs,Capsule,10 capsules
+Azithromycin 500mg,Azithromycin (500mg),Antibiotic Labs,Tablet,3 tablets
+Cetirizine 10mg,Cetirizine Hydrochloride (10mg),Allergy Care,Tablet,10 tablets
+Omeprazole 20mg,Omeprazole (20mg),Gastro Pharma,Capsule,14 capsules
+Metformin 500mg,Metformin Hydrochloride (500mg),Diabetes Care,Tablet,30 tablets
+Metformin 850mg,Metformin Hydrochloride (850mg),Diabetes Care,Tablet,30 tablets
+Amlodipine 5mg,Amlodipine Besylate (5mg),Cardio Health,Tablet,30 tablets
+Atorvastatin 10mg,Atorvastatin Calcium (10mg),Cardio Health,Tablet,30 tablets
+Atorvastatin 20mg,Atorvastatin Calcium (20mg),Cardio Health,Tablet,30 tablets
+Aspirin 75mg,Aspirin (75mg),Cardio Health,Tablet,30 tablets
+Aspirin 150mg,Aspirin (150mg),Cardio Health,Tablet,30 tablets
+Clopidogrel 75mg,Clopidogrel Bisulfate (75mg),Cardio Health,Tablet,30 tablets
+Losartan 50mg,Losartan Potassium (50mg),BP Control,Tablet,30 tablets
+Lisinopril 10mg,Lisinopril (10mg),BP Control,Tablet,30 tablets
+Pantoprazole 40mg,Pantoprazole Sodium (40mg),Gastro Pharma,Tablet,15 tablets
+Ranitidine 150mg,Ranitidine Hydrochloride (150mg),Gastro Pharma,Tablet,30 tablets
+Diclofenac 50mg,Diclofenac Sodium (50mg),Pain Relief Inc,Tablet,10 tablets
+Ondansetron 4mg,Ondansetron Hydrochloride (4mg),Nausea Control,Tablet,10 tablets
+Ciprofloxacin 500mg,Ciprofloxacin Hydrochloride (500mg),Antibiotic Labs,Tablet,10 tablets
+Levofloxacin 500mg,Levofloxacin (500mg),Antibiotic Labs,Tablet,5 tablets
+Doxycycline 100mg,Doxycycline Hyclate (100mg),Antibiotic Labs,Capsule,10 capsules
+Prednisolone 5mg,Prednisolone (5mg),Steroid Pharma,Tablet,10 tablets
+Prednisolone 10mg,Prednisolone (10mg),Steroid Pharma,Tablet,10 tablets
+Montelukast 10mg,Montelukast Sodium (10mg),Respiratory Care,Tablet,30 tablets
+Salbutamol Inhaler,Salbutamol (100mcg/dose),Respiratory Care,Inhaler,200 doses
+Levothyroxine 50mcg,Levothyroxine Sodium (50mcg),Thyroid Care,Tablet,30 tablets
+Levothyroxine 100mcg,Levothyroxine Sodium (100mcg),Thyroid Care,Tablet,30 tablets
+Glimepiride 1mg,Glimepiride (1mg),Diabetes Care,Tablet,30 tablets
+Glimepiride 2mg,Glimepiride (2mg),Diabetes Care,Tablet,30 tablets
+Insulin Glargine,Insulin Glargine (100IU/ml),Diabetes Care,Injection,10ml vial
+Vitamin D3 60000IU,Cholecalciferol (60000IU),Vitamin Supplements,Capsule,8 capsules
+Calcium Carbonate 500mg,Calcium Carbonate (500mg) + Vitamin D3 (250IU),Bone Health,Tablet,30 tablets
+Folic Acid 5mg,Folic Acid (5mg),Generic Pharma,Tablet,30 tablets
+Iron Folic Acid,Ferrous Sulfate (100mg) + Folic Acid (0.5mg),Hematology Care,Tablet,30 tablets
+Alprazolam 0.5mg,Alprazolam (0.5mg),Mental Health Pharma,Tablet,10 tablets
+Clonazepam 0.5mg,Clonazepam (0.5mg),Mental Health Pharma,Tablet,10 tablets
+Escitalopram 10mg,Escitalopram Oxalate (10mg),Mental Health Pharma,Tablet,30 tablets
+Fluoxetine 20mg,Fluoxetine Hydrochloride (20mg),Mental Health Pharma,Capsule,30 capsules
+Tramadol 50mg,Tramadol Hydrochloride (50mg),Pain Relief Inc,Capsule,10 capsules
+Gabapentin 300mg,Gabapentin (300mg),Neuro Care,Capsule,30 capsules
+Pregabalin 75mg,Pregabalin (75mg),Neuro Care,Capsule,30 capsules
+Phenytoin 100mg,Phenytoin Sodium (100mg),Neuro Care,Tablet,30 tablets
+Carbamazepine 200mg,Carbamazepine (200mg),Neuro Care,Tablet,30 tablets
+Furosemide 40mg,Furosemide (40mg),Cardio Health,Tablet,30 tablets
+Spironolactone 25mg,Spironolactone (25mg),Cardio Health,Tablet,30 tablets
+Digoxin 0.25mg,Digoxin (0.25mg),Cardio Health,Tablet,30 tablets
+Warfarin 5mg,Warfarin Sodium (5mg),Anticoagulant Care,Tablet,30 tablets

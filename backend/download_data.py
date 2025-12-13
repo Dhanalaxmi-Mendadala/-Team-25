@@ -1,14 +1,35 @@
 import os
 import zipfile
 from kaggle.api.kaggle_api_extended import KaggleApi
+from dotenv import load_dotenv
 
 def download_medicine_dataset():
+    # Load environment variables from .env file
+    load_dotenv()
+    
+    # Set Kaggle credentials from environment variables
+    kaggle_username = os.getenv('KAGGLE_USERNAME')
+    kaggle_key = os.getenv('KAGGLE_KEY')
+    
+    if not kaggle_username or not kaggle_key:
+        print("Error: KAGGLE_USERNAME and KAGGLE_KEY must be set in .env file") the .env file:")
+        print("  KAGGLE_USERNAME=your_username")
+        print("  KAGGLE_KEY=your_api_key")
+        return
+    
+    # Set environment variables for Kaggle API
+    os.environ['KAGGLE_USERNAME'] = kaggle_username
+    os.environ['KAGGLE_KEY'] = kaggle_key
+    
+    print(f"Authenticating as: {kaggle_username}")
+    
     # Authenticate
     api = KaggleApi()
     try:
         api.authenticate()
+        print("✓ Authentication successful!")
     except Exception as e:
-        print("Error authenticating with Kaggle. Make sure kaggle.json is in ~/.kaggle/ or the current directory.")
+        print("Error authenticating with Kaggle.")
         print(e)
         return
 
