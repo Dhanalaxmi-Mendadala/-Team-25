@@ -5,34 +5,71 @@ import {
     StyleSheet,
     SafeAreaView,
     ScrollView,
-    TouchableOpacity
+    TouchableOpacity,
+    ActivityIndicator,
+    Alert,
+    StatusBar
 } from 'react-native';
-import { COLORS, SIZES } from '../constants/theme';
-import { analyzePrescription } from '../utils/analysis';
+import { COLORS, SIZES, SHADOWS } from '../constants/theme';
+import { analyzePrescriptionWithAI } from '../utils/analysis';
 import { savePrescription } from '../utils/storage';
 
 const AnalysisScreen = ({ route, navigation }) => {
-    const { data } = route.params; // Prescription Data passed from previous screen
+    const { data } = route.params;
     const [analysis, setAnalysis] = useState(null);
+    const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        if (data) {
-            const result = analyzePrescription(data);
-            setAnalysis(result);
-        }
+        const fetchAnalysis = async () => {
+            if (data) {
+                try {
+                    setLoading(true);
+                    const result = await analyzePrescriptionWithAI(data);
+
+                    if (result.error) {
+                        Alert.alert("Analysis Failed", result.message);
+                        navigation.goBack();
+                        return;
+                    }
+
+                    setAnalysis(result);
+                } catch (err) {
+                    Alert.alert("Error", "Something went wrong.");
+                    navigation.goBack();
+                } finally {
+                    setLoading(false);
+                }
+            }
+        };
+
+        fetchAnalysis();
     }, [data]);
 
     const handleFinalize = async () => {
-        if (analysis) {
-            await savePrescription(analysis.structuredOutput);
-            alert('Prescription Saved Successfully!');
-            navigation.navigate('Prescription'); // Go back to start
+        if (analysis && analysis.structured_prescription) {
+            await savePrescription(analysis.structured_prescription);
+            Alert.alert('Success', 'Prescription Saved to Records!');
+            navigation.navigate('Prescription');
         }
     };
 
+    if (loading) {
+        return (
+            <View style={styles.loadingContainer}>
+                <StatusBar barStyle="dark-content" backgroundColor={COLORS.background} />
+                <ActivityIndicator size="large" color={COLORS.primary} />
+                <Text style={styles.loadingText}>Analyzing Prescription...</Text>
+                <Text style={styles.loadingSubText}>Checking interactions & safety doses</Text>
+            </View>
+        );
+    }
+
     if (!analysis) return null;
 
-    const { score, rating, issues, structuredOutput } = analysis;
+    const score = analysis.score || 0;
+    const rating = analysis.evaluation?.overall_rating || 'Unknown';
+    const structuredOutput = analysis.structured_prescription || [];
+    const evaluation = analysis.evaluation || {};
 
     const getScoreColor = (s) => {
         if (s >= 80) return COLORS.success;
@@ -43,50 +80,64 @@ const AnalysisScreen = ({ route, navigation }) => {
     return (
         <SafeAreaView style={styles.container}>
             <ScrollView contentContainerStyle={styles.scrollContent}>
-                <Text style={styles.title}>Prescription Analysis</Text>
+                <Text style={styles.headerTitle}>Analysis Report</Text>
 
-                {/* Score Card */}
-                <View style={styles.card}>
-                    <Text style={styles.cardTitle}>Overall Score</Text>
-                    <View style={[styles.scoreCircle, { borderColor: getScoreColor(score) }]}>
-                        <Text style={[styles.scoreText, { color: getScoreColor(score) }]}>{score}</Text>
+                {/* Score Dashboard */}
+                <View style={styles.scoreCard}>
+                    <View style={[styles.scoreRing, { borderColor: getScoreColor(score) }]}>
+                        <Text style={[styles.scoreVal, { color: getScoreColor(score) }]}>{score}</Text>
+                        <Text style={styles.scoreLabel}>/100</Text>
                     </View>
-                    <Text style={[styles.ratingText, { color: getScoreColor(score) }]}>{rating}</Text>
+                    <View style={styles.scoreInfo}>
+                        <Text style={[styles.ratingTitle, { color: getScoreColor(score) }]}>{rating}</Text>
+                        <Text style={styles.ratingDesc}>Based on clinical guidelines</Text>
+                    </View>
                 </View>
 
-                {/* Issues List */}
+                {/* Statistics */}
+                <View style={styles.statsContainer}>
+                    <View style={styles.statBox}>
+                        <Text style={styles.statLabel}>Safety</Text>
+                        <Text style={[styles.statValue, { color: COLORS.primary }]}>{evaluation.safety}%</Text>
+                    </View>
+                    <View style={styles.divider} />
+                    <View style={styles.statBox}>
+                        <Text style={styles.statLabel}>Completeness</Text>
+                        <Text style={[styles.statValue, { color: COLORS.info }]}>{evaluation.completeness}%</Text>
+                    </View>
+                </View>
+
+                {/* Detailed Analysis */}
                 <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>Guardrails & Alerts</Text>
-                    {issues.length === 0 ? (
-                        <Text style={{ color: COLORS.success, fontStyle: 'italic' }}>No issues detected. Good job!</Text>
+                    <Text style={styles.sectionHeader}>Prescription Breakdown</Text>
+                    {structuredOutput.length === 0 ? (
+                        <Text style={styles.emptyText}>No medicines processed.</Text>
                     ) : (
-                        issues.map((issue, index) => (
-                            <View key={index} style={styles.issueItem}>
-                                <Text style={{
-                                    color: issue.type === 'critical' ? COLORS.danger : COLORS.warning,
-                                    fontWeight: 'bold'
-                                }}>
-                                    {issue.type === 'critical' ? '⚠️ CRITICAL' : '⚠️ WARNING'}
-                                </Text>
-                                <Text style={styles.issueText}>{issue.message}</Text>
+                        structuredOutput.map((med, index) => (
+                            <View key={index} style={styles.medItem}>
+                                <View style={styles.medHeader}>
+                                    <Text style={styles.medName}>{med.medicine_name}</Text>
+                                    <Text style={styles.medDose}>{med.strength}</Text>
+                                </View>
+                                <View style={styles.tagRow}>
+                                    <View style={styles.tag}><Text style={styles.tagText}>{med.frequency}</Text></View>
+                                    <View style={styles.tag}><Text style={styles.tagText}>{med.timing}</Text></View>
+                                    <View style={styles.tag}><Text style={styles.tagText}>{med.duration}</Text></View>
+                                </View>
+                                {med.warnings && med.warnings.length > 0 && (
+                                    <View style={styles.warningBox}>
+                                        {med.warnings.map((w, i) => (
+                                            <Text key={i} style={styles.warningText}>⚠️ {w}</Text>
+                                        ))}
+                                    </View>
+                                )}
                             </View>
                         ))
                     )}
                 </View>
 
-                {/* Structured Preview */}
-                <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>Structured Output Preview</Text>
-                    <Text style={styles.jsonText}>
-                        {JSON.stringify(structuredOutput, null, 2)}
-                    </Text>
-                </View>
-
-                <TouchableOpacity
-                    style={[styles.button, { backgroundColor: COLORS.primary }]}
-                    onPress={handleFinalize}
-                >
-                    <Text style={styles.buttonText}>Finalize & Save</Text>
+                <TouchableOpacity style={styles.approveButton} onPress={handleFinalize}>
+                    <Text style={styles.approveButtonText}>Approve & Save</Text>
                 </TouchableOpacity>
 
             </ScrollView>
@@ -99,84 +150,179 @@ const styles = StyleSheet.create({
         flex: 1,
         backgroundColor: COLORS.background,
     },
+    loadingContainer: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        backgroundColor: COLORS.background
+    },
+    loadingText: {
+        marginTop: 20,
+        fontSize: 18,
+        fontWeight: '600',
+        color: COLORS.dark
+    },
+    loadingSubText: {
+        marginTop: 5,
+        color: COLORS.secondary,
+        fontSize: 14
+    },
     scrollContent: {
         padding: SIZES.padding,
     },
-    title: {
-        fontSize: SIZES.h1,
+    headerTitle: {
+        fontSize: 24,
         fontWeight: 'bold',
-        color: COLORS.primary,
-        marginBottom: SIZES.padding,
+        color: COLORS.dark,
+        marginBottom: 20,
         textAlign: 'center'
     },
-    card: {
-        backgroundColor: COLORS.white,
-        padding: SIZES.padding,
-        borderRadius: SIZES.borderRadius,
+    scoreCard: {
+        flexDirection: 'row',
         alignItems: 'center',
-        marginBottom: SIZES.padding,
-        elevation: 2,
+        backgroundColor: COLORS.white,
+        padding: 20,
+        borderRadius: 20,
+        marginBottom: 20,
+        ...SHADOWS.medium
     },
-    cardTitle: {
-        fontSize: SIZES.h3,
-        color: COLORS.secondary,
-        marginBottom: 10,
-    },
-    scoreCircle: {
+    scoreRing: {
         width: 100,
         height: 100,
         borderRadius: 50,
         borderWidth: 8,
         justifyContent: 'center',
         alignItems: 'center',
-        marginBottom: 10,
+        marginRight: 20
     },
-    scoreText: {
-        fontSize: 32,
+    scoreVal: {
+        fontSize: 36,
         fontWeight: 'bold',
     },
-    ratingText: {
-        fontSize: SIZES.h2,
+    scoreLabel: {
+        fontSize: 12,
+        color: COLORS.secondary,
+        marginTop: -5
+    },
+    scoreInfo: {
+        flex: 1
+    },
+    ratingTitle: {
+        fontSize: 22,
         fontWeight: 'bold',
+        marginBottom: 5
+    },
+    ratingDesc: {
+        fontSize: 14,
+        color: COLORS.secondary,
+        lineHeight: 20
+    },
+    statsContainer: {
+        flexDirection: 'row',
+        backgroundColor: COLORS.white,
+        padding: 20,
+        borderRadius: 16,
+        marginBottom: 25,
+        ...SHADOWS.light
+    },
+    statBox: {
+        flex: 1,
+        alignItems: 'center'
+    },
+    divider: {
+        width: 1,
+        backgroundColor: COLORS.border
+    },
+    statValue: {
+        fontSize: 24,
+        fontWeight: 'bold',
+        marginBottom: 5
+    },
+    statLabel: {
+        fontSize: 13,
+        color: COLORS.secondary,
+        textTransform: 'uppercase',
+        letterSpacing: 1
     },
     section: {
-        marginBottom: SIZES.padding,
+        marginBottom: 30
     },
-    sectionTitle: {
-        fontSize: SIZES.h3,
-        fontWeight: 'bold',
-        color: COLORS.text,
-        marginBottom: 10,
+    sectionHeader: {
+        fontSize: 18,
+        fontWeight: '700',
+        color: COLORS.dark,
+        marginBottom: 15,
+        marginLeft: 5
     },
-    issueItem: {
+    medItem: {
         backgroundColor: COLORS.white,
-        padding: 10,
-        borderRadius: SIZES.borderRadius,
-        marginBottom: 8,
-        borderLeftWidth: 4,
-        borderLeftColor: COLORS.danger,
+        padding: 16,
+        borderRadius: 12,
+        marginBottom: 12,
+        ...SHADOWS.small
     },
-    issueText: {
-        color: COLORS.text,
-        marginTop: 4,
-    },
-    jsonText: {
-        fontFamily: 'monospace',
-        fontSize: 10,
-        backgroundColor: '#333',
-        color: '#0f0',
-        padding: 10,
-        borderRadius: SIZES.borderRadius,
-    },
-    button: {
-        padding: SIZES.padding,
-        borderRadius: SIZES.borderRadius,
+    medHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
         alignItems: 'center',
-        marginBottom: 20,
+        marginBottom: 10
     },
-    buttonText: {
+    medName: {
+        fontSize: 16,
+        fontWeight: 'bold',
+        color: COLORS.text
+    },
+    medDose: {
+        fontSize: 16,
+        color: COLORS.primary,
+        fontWeight: '600'
+    },
+    tagRow: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        gap: 8,
+        marginTop: 5
+    },
+    tag: {
+        backgroundColor: COLORS.light,
+        paddingVertical: 4,
+        paddingHorizontal: 10,
+        borderRadius: 6
+    },
+    tagText: {
+        fontSize: 12,
+        color: COLORS.secondary,
+        fontWeight: '500'
+    },
+    warningBox: {
+        marginTop: 12,
+        backgroundColor: '#FFF5F5',
+        padding: 10,
+        borderRadius: 8,
+        borderLeftWidth: 3,
+        borderLeftColor: COLORS.danger
+    },
+    warningText: {
+        color: COLORS.danger,
+        fontSize: 13,
+        lineHeight: 18
+    },
+    emptyText: {
+        textAlign: 'center',
+        color: COLORS.secondary,
+        fontStyle: 'italic',
+        marginTop: 10
+    },
+    approveButton: {
+        backgroundColor: COLORS.primary, // Teal
+        paddingVertical: 18,
+        borderRadius: 16,
+        alignItems: 'center',
+        ...SHADOWS.medium
+    },
+    approveButtonText: {
         color: COLORS.white,
-        fontSize: SIZES.h3,
+        fontSize: 18,
         fontWeight: 'bold',
     }
 });

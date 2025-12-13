@@ -9,9 +9,9 @@ import {
     Alert,
     KeyboardAvoidingView,
     Platform,
-    FlatList
+    StatusBar
 } from 'react-native';
-import { COLORS, SIZES } from '../constants/theme';
+import { COLORS, SIZES, SHADOWS } from '../constants/theme';
 import { clearAllData } from '../utils/storage';
 import MedicineAutocomplete from '../components/MedicineAutocomplete';
 
@@ -36,25 +36,15 @@ const PrescriptionScreen = ({ navigation }) => {
     };
 
     const handleAnalyze = () => {
-        // 1. Validate Patient Info
         if (!patientName || !age || !sex) {
-            Alert.alert('Missing Patient Info', 'Please fill in Name, Age, and Sex.');
+            Alert.alert('Missing Incomplete', 'Please fill in Patient Name, Age, and Sex.');
             return;
         }
-
-        // 2. Validate Vitals
-        if (!temperature || !bp || !weight || !pulse) {
-            Alert.alert('Missing Vitals', 'Please fill in all medical measurements (Temp, BP, Weight, Pulse).');
-            return;
-        }
-
-        // 3. Validate Medicines
         if (medicines.length === 0) {
-            Alert.alert('Empty Prescription', 'Please add at least one medicine.');
+            Alert.alert('No Medicines', 'Please add at least one medicine to the prescription.');
             return;
         }
 
-        // Propagate data to Analysis
         const prescriptionData = {
             patient: { name: patientName, age, sex },
             vitals: { temperature, bp, weight, pulse },
@@ -64,18 +54,19 @@ const PrescriptionScreen = ({ navigation }) => {
         navigation.navigate('Analysis', { data: prescriptionData });
     };
 
-    const handleReset = async () => {
+    const handleReset = () => {
         Alert.alert(
-            "Reset App",
-            "Are you sure? This will clear your clinic profile.",
+            "Clear Data",
+            "This will clear the current form data.",
             [
                 { text: "Cancel", style: "cancel" },
                 {
-                    text: "Reset",
+                    text: "Clear",
                     style: "destructive",
-                    onPress: async () => {
-                        await clearAllData();
-                        navigation.replace('Onboarding');
+                    onPress: () => {
+                        setPatientName(''); setAge(''); setSex('');
+                        setTemperature(''); setBP(''); setWeight(''); setPulse('');
+                        setMedicines([]);
                     }
                 }
             ]
@@ -84,133 +75,127 @@ const PrescriptionScreen = ({ navigation }) => {
 
     const renderMedicineItem = ({ item }) => (
         <View style={styles.medicineCard}>
-            <View style={{ flex: 1 }}>
-                <Text style={styles.medName}>{item.name} <Text style={styles.medType}>({item.type})</Text></Text>
-                <Text style={styles.medDetails}>{item.dosage} | {item.frequency} | {item.duration}</Text>
-                {item.notes ? <Text style={styles.medNotes}>Note: {item.notes}</Text> : null}
+            <View style={styles.medIcon}>
+                <Text style={{ fontSize: 20 }}>💊</Text>
             </View>
-            <TouchableOpacity onPress={() => removeMedicine(item.id)}>
-                <Text style={{ color: COLORS.danger }}>Remove</Text>
+            <View style={{ flex: 1, marginLeft: 15 }}>
+                <Text style={styles.medName}>{item.name}</Text>
+                <Text style={styles.medDetails}>{item.dosage} • {item.frequency} • {item.duration}</Text>
+                {item.notes ? <Text style={styles.medNotes}>📝 {item.notes}</Text> : null}
+            </View>
+            <TouchableOpacity onPress={() => removeMedicine(item.id)} style={styles.deleteButton}>
+                <Text style={styles.deleteText}>×</Text>
             </TouchableOpacity>
         </View>
     );
 
     return (
         <View style={styles.container}>
+            <StatusBar barStyle="dark-content" backgroundColor={COLORS.background} />
             <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={{ flex: 1 }}>
                 <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
+
+                    {/* Header */}
                     <View style={styles.header}>
-                        <Text style={styles.title}>New Prescription</Text>
-                        <TouchableOpacity onPress={handleReset}>
-                            <Text style={{ color: COLORS.danger }}>Reset App</Text>
+                        <View>
+                            <Text style={styles.subtitle}>Welcome back,</Text>
+                            <Text style={styles.title}>Dr. Smith</Text>
+                        </View>
+                        <TouchableOpacity onPress={handleReset} style={styles.resetButton}>
+                            <Text style={styles.resetButtonText}>Clear</Text>
                         </TouchableOpacity>
                     </View>
 
-                    {/* Patient Details Section */}
-                    <View style={styles.section}>
-                        <Text style={styles.sectionTitle}>Patient Details</Text>
-                        <View style={styles.row}>
-                            <View style={[styles.inputGroup, { flex: 2, marginRight: 10 }]}>
-                                <Text style={styles.label}>Name</Text>
+                    {/* Patient Info Card */}
+                    <View style={styles.card}>
+                        <Text style={styles.cardTitle}>Patient Information</Text>
+                        <View style={styles.inputRow}>
+                            <View style={[styles.inputWrapper, { flex: 2, marginRight: 10 }]}>
+                                <Text style={styles.label}>Full Name</Text>
                                 <TextInput
                                     style={styles.input}
                                     value={patientName}
                                     onChangeText={setPatientName}
-                                    placeholder="Patient Name"
+                                    placeholder="e.g. John Doe"
+                                    placeholderTextColor={COLORS.muted}
                                 />
                             </View>
-                            <View style={[styles.inputGroup, { flex: 1 }]}>
+                            <View style={[styles.inputWrapper, { flex: 1 }]}>
                                 <Text style={styles.label}>Age</Text>
                                 <TextInput
                                     style={styles.input}
                                     value={age}
                                     onChangeText={setAge}
-                                    placeholder="Age"
+                                    placeholder="Yrs"
                                     keyboardType="numeric"
+                                    placeholderTextColor={COLORS.muted}
                                 />
                             </View>
                         </View>
-                        <View style={styles.inputGroup}>
-                            <Text style={styles.label}>Sex (M/F/O)</Text>
-                            <TextInput
-                                style={styles.input}
-                                value={sex}
-                                onChangeText={setSex}
-                                placeholder="Sex"
-                            />
+                        <View style={styles.inputWrapper}>
+                            <Text style={styles.label}>Gender</Text>
+                            <View style={styles.genderRow}>
+                                {['Male', 'Female', 'Other'].map((option) => (
+                                    <TouchableOpacity
+                                        key={option}
+                                        style={[styles.genderChip, sex === option && styles.genderChipActive]}
+                                        onPress={() => setSex(option)}
+                                    >
+                                        <Text style={[styles.genderText, sex === option && styles.genderTextActive]}>{option}</Text>
+                                    </TouchableOpacity>
+                                ))}
+                            </View>
                         </View>
                     </View>
 
-                    {/* Medical Vitals Section */}
-                    <View style={styles.section}>
-                        <Text style={styles.sectionTitle}>Medical Vitals</Text>
-                        <View style={styles.row}>
-                            <View style={[styles.inputGroup, { flex: 1, marginRight: 10 }]}>
+                    {/* Vitals Card */}
+                    <View style={styles.card}>
+                        <Text style={styles.cardTitle}>Vital Signs</Text>
+                        <View style={styles.gridRow}>
+                            {/* Reusing a helper for grid items could be better, but keeping it explicit here */}
+                            <View style={styles.gridItem}>
+                                <Text style={styles.label}>BP</Text>
+                                <TextInput style={styles.input} value={bp} onChangeText={setBP} placeholder="120/80" placeholderTextColor={COLORS.muted} />
+                            </View>
+                            <View style={styles.gridItem}>
                                 <Text style={styles.label}>Temp (°F)</Text>
-                                <TextInput
-                                    style={styles.input}
-                                    value={temperature}
-                                    onChangeText={setTemperature}
-                                    placeholder="98.6"
-                                    keyboardType="numeric"
-                                />
-                            </View>
-                            <View style={[styles.inputGroup, { flex: 1 }]}>
-                                <Text style={styles.label}>BP (mmHg)</Text>
-                                <TextInput
-                                    style={styles.input}
-                                    value={bp}
-                                    onChangeText={setBP}
-                                    placeholder="120/80"
-                                />
+                                <TextInput style={styles.input} value={temperature} onChangeText={setTemperature} placeholder="98.6" keyboardType="numeric" placeholderTextColor={COLORS.muted} />
                             </View>
                         </View>
-                        <View style={styles.row}>
-                            <View style={[styles.inputGroup, { flex: 1, marginRight: 10 }]}>
+                        <View style={[styles.gridRow, { marginTop: 10 }]}>
+                            <View style={styles.gridItem}>
                                 <Text style={styles.label}>Weight (kg)</Text>
-                                <TextInput
-                                    style={styles.input}
-                                    value={weight}
-                                    onChangeText={setWeight}
-                                    placeholder="70"
-                                    keyboardType="numeric"
-                                />
+                                <TextInput style={styles.input} value={weight} onChangeText={setWeight} placeholder="70" keyboardType="numeric" placeholderTextColor={COLORS.muted} />
                             </View>
-                            <View style={[styles.inputGroup, { flex: 1 }]}>
+                            <View style={styles.gridItem}>
                                 <Text style={styles.label}>Pulse (bpm)</Text>
-                                <TextInput
-                                    style={styles.input}
-                                    value={pulse}
-                                    onChangeText={setPulse}
-                                    placeholder="72"
-                                    keyboardType="numeric"
-                                />
+                                <TextInput style={styles.input} value={pulse} onChangeText={setPulse} placeholder="72" keyboardType="numeric" placeholderTextColor={COLORS.muted} />
                             </View>
                         </View>
                     </View>
 
-                    {/* Medicine Entry Section */}
-                    <View style={[styles.section, { zIndex: 100 }]}>
-                        <Text style={styles.sectionTitle}>Prescription</Text>
+                    {/* Prescription Section */}
+                    <View style={styles.prescriptionSection}>
+                        <Text style={[styles.cardTitle, { marginBottom: 10 }]}>Prescription</Text>
                         <MedicineAutocomplete onAddMedicine={addMedicine} />
 
-                        <View style={{ marginTop: 15 }}>
+                        <View style={styles.medicineList}>
                             {medicines.map((item) => (
-                                <View key={item.id} style={{ marginBottom: 10 }}>
+                                <View key={item.id} style={{ marginBottom: 12 }}>
                                     {renderMedicineItem({ item })}
                                 </View>
                             ))}
-                            {medicines.length === 0 && (
-                                <Text style={{ color: COLORS.secondary, textAlign: 'center', marginTop: 10 }}>No medicines added yet.</Text>
-                            )}
                         </View>
                     </View>
-
-                    <TouchableOpacity style={styles.analyzeButton} onPress={handleAnalyze}>
-                        <Text style={styles.analyzeButtonText}>Analyze Prescription</Text>
-                    </TouchableOpacity>
-
                 </ScrollView>
+
+                {/* Floating Action Button for Analysis */}
+                <View style={styles.fabContainer}>
+                    <TouchableOpacity style={styles.analyzeButton} onPress={handleAnalyze}>
+                        <Text style={styles.analyzeButtonText}>✨ Analyze with AI</Text>
+                    </TouchableOpacity>
+                </View>
+
             </KeyboardAvoidingView>
         </View>
     );
@@ -223,98 +208,171 @@ const styles = StyleSheet.create({
     },
     scrollContent: {
         padding: SIZES.padding,
-        paddingBottom: 50,
+        paddingBottom: 100, // Space for FAB
     },
     header: {
+        marginBottom: 25,
         flexDirection: 'row',
         justifyContent: 'space-between',
-        alignItems: 'center',
-        marginBottom: SIZES.padding,
+        alignItems: 'flex-start'
+    },
+    subtitle: {
+        fontSize: 14,
+        color: COLORS.secondary,
+        fontWeight: '500'
     },
     title: {
-        fontSize: SIZES.h1,
+        fontSize: 28,
         fontWeight: 'bold',
-        color: COLORS.primary,
+        color: COLORS.dark,
     },
-    section: {
+    resetButton: {
+        padding: 5,
+    },
+    resetButtonText: {
+        color: COLORS.danger,
+        fontWeight: '600'
+    },
+    card: {
         backgroundColor: COLORS.white,
-        padding: SIZES.padding,
+        padding: 20,
         borderRadius: SIZES.borderRadius,
-        marginBottom: SIZES.padding,
-        elevation: 2,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.1,
-        shadowRadius: 2,
+        marginBottom: 20,
+        ...SHADOWS.light,
+        borderWidth: 1,
+        borderColor: COLORS.white, // Or faint border
     },
-    sectionTitle: {
-        fontSize: SIZES.h3,
-        fontWeight: 'bold',
-        marginBottom: SIZES.padding,
-        color: COLORS.text,
+    cardTitle: {
+        fontSize: 16,
+        fontWeight: '700',
+        color: COLORS.primary,
+        marginBottom: 15,
+        textTransform: 'uppercase',
+        letterSpacing: 0.5
     },
-    row: {
+    inputRow: {
+        flexDirection: 'row',
+        marginBottom: 15
+    },
+    gridRow: {
         flexDirection: 'row',
         justifyContent: 'space-between',
+        gap: 15
     },
-    inputGroup: {
-        marginBottom: 12,
+    gridItem: {
+        flex: 1
+    },
+    inputWrapper: {
+        marginBottom: 5
     },
     label: {
-        fontSize: SIZES.small,
+        fontSize: 12,
         color: COLORS.secondary,
-        marginBottom: 4,
+        marginBottom: 6,
+        fontWeight: '600'
     },
     input: {
+        backgroundColor: COLORS.light,
+        borderRadius: 8,
+        paddingVertical: 12,
+        paddingHorizontal: 15,
+        fontSize: 16,
+        color: COLORS.text,
         borderWidth: 1,
         borderColor: COLORS.border,
-        borderRadius: SIZES.borderRadius,
-        padding: 10,
-        fontSize: SIZES.body,
-        backgroundColor: COLORS.light,
     },
-    analyzeButton: {
-        backgroundColor: COLORS.success,
-        padding: SIZES.padding,
-        borderRadius: SIZES.borderRadius,
-        alignItems: 'center',
-        marginTop: SIZES.padding,
-    },
-    analyzeButtonText: {
-        color: COLORS.white,
-        fontSize: SIZES.h3,
-        fontWeight: 'bold',
-    },
-    medicineCard: {
+    genderRow: {
         flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        backgroundColor: COLORS.background,
-        padding: 10,
-        borderRadius: SIZES.borderRadius,
+        gap: 10,
+        marginTop: 5
+    },
+    genderChip: {
+        paddingVertical: 8,
+        paddingHorizontal: 16,
+        borderRadius: 20,
+        backgroundColor: COLORS.light,
         borderWidth: 1,
         borderColor: COLORS.border
     },
-    medName: {
-        fontWeight: 'bold',
-        fontSize: SIZES.body,
-        color: COLORS.text,
+    genderChipActive: {
+        backgroundColor: COLORS.primary,
+        borderColor: COLORS.primary
     },
-    medType: {
-        fontWeight: 'normal',
-        fontSize: SIZES.small,
+    genderText: {
         color: COLORS.secondary,
+        fontWeight: '500'
+    },
+    genderTextActive: {
+        color: COLORS.white
+    },
+    prescriptionSection: {
+        marginBottom: 20
+    },
+    medicineList: {
+        marginTop: 15
+    },
+    medicineCard: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: COLORS.white,
+        padding: 15,
+        borderRadius: 12,
+        ...SHADOWS.small,
+        borderLeftWidth: 4,
+        borderLeftColor: COLORS.primary
+    },
+    medIcon: {
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        backgroundColor: COLORS.light,
+        justifyContent: 'center',
+        alignItems: 'center'
+    },
+    medName: {
+        fontSize: 16,
+        fontWeight: '700',
+        color: COLORS.text
     },
     medDetails: {
-        fontSize: SIZES.small,
+        fontSize: 14,
         color: COLORS.secondary,
         marginTop: 2
     },
     medNotes: {
-        fontSize: 10,
+        fontSize: 12,
         color: COLORS.info,
-        marginTop: 2,
-        fontStyle: 'italic'
+        marginTop: 4
+    },
+    deleteButton: {
+        padding: 10,
+    },
+    deleteText: {
+        fontSize: 24,
+        color: COLORS.muted,
+        fontWeight: '300',
+        lineHeight: 24
+    },
+    fabContainer: {
+        position: 'absolute',
+        bottom: 25,
+        left: 20,
+        right: 20,
+        ...SHADOWS.medium
+    },
+    analyzeButton: {
+        backgroundColor: COLORS.primary,
+        paddingVertical: 18,
+        borderRadius: 16,
+        alignItems: 'center',
+        flexDirection: 'row',
+        justifyContent: 'center',
+        gap: 10
+    },
+    analyzeButtonText: {
+        color: COLORS.white,
+        fontSize: 18,
+        fontWeight: 'bold',
     }
 });
 
