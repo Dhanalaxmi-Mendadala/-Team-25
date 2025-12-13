@@ -26,6 +26,7 @@ const prescriptionSchema = z.object({
     bp: z.string().regex(/^\d{2,3}\/\d{2,3}$/, "Format: 120/80").optional().or(z.literal('')),
     weight: z.coerce.number().min(1, "Invalid Weight").max(300, "Invalid Weight").optional().or(z.literal('')),
     pulse: z.coerce.number().min(30, "Invalid Pulse").max(200, "Invalid Pulse").optional().or(z.literal('')),
+    diagnosis: z.string().optional(),
 });
 
 const InputWithIcon = ({ label, icon, error, ...props }) => (
@@ -52,7 +53,8 @@ const PrescriptionScreen = ({ navigation }) => {
         temperature: '',
         bp: '',
         weight: '',
-        pulse: ''
+        pulse: '',
+        diagnosis: ''
     });
 
     const [medicines, setMedicines] = useState([]);
@@ -89,7 +91,8 @@ const PrescriptionScreen = ({ navigation }) => {
                     onPress: () => {
                         setForm({
                             patientName: '', age: '', sex: '',
-                            temperature: '', bp: '', weight: '', pulse: ''
+                            temperature: '', bp: '', weight: '', pulse: '',
+                            diagnosis: ''
                         });
                         setMedicines([]);
                         setErrors({});
@@ -128,6 +131,7 @@ const PrescriptionScreen = ({ navigation }) => {
                 weight: form.weight,
                 pulse: form.pulse
             },
+            diagnosis: form.diagnosis,
             medicines
         };
 
@@ -243,6 +247,26 @@ const PrescriptionScreen = ({ navigation }) => {
                             <View style={styles.gridItem}>
                                 <InputWithIcon label="Pulse (bpm)" icon="heart-flash" placeholder="72" keyboardType="numeric" value={form.pulse} onChangeText={(t) => handleChange('pulse', t)} error={errors.pulse} />
                             </View>
+                        </View>
+                    </View>
+
+                    {/* Diagnosis Card */}
+                    <View style={styles.card}>
+                        <View style={styles.cardHeaderRow}>
+                            <MaterialCommunityIcons name="clipboard-text-outline" size={20} color={COLORS.primary} />
+                            <Text style={styles.cardTitle}>Diagnosis Notes</Text>
+                        </View>
+                        <View style={styles.inputWrapper}>
+                            <MaterialCommunityIcons name="stethoscope" size={20} color={COLORS.secondary} style={[styles.inputIcon, { marginTop: 12 }]} />
+                            <TextInput
+                                style={[styles.input, { height: 80, textAlignVertical: 'top' }]}
+                                placeholder="Enter diagnosis or clinical notes..."
+                                placeholderTextColor={COLORS.muted}
+                                multiline
+                                numberOfLines={3}
+                                value={form.diagnosis}
+                                onChangeText={(t) => handleChange('diagnosis', t)}
+                            />
                         </View>
                     </View>
 

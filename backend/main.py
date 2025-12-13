@@ -11,17 +11,12 @@ load_dotenv()
 
 app = FastAPI()
 
-# CORS configuration
-origins = [
-    "*", # Allow all for development. Restrict in production.
-]
-
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,
+    allow_origins=["*"],  # Allows all origins
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["*"],  # Allows all methods
+    allow_headers=["*"],  # Allows all headers
 )
 
 class PrescriptionRequest(BaseModel):
@@ -63,4 +58,4 @@ async def generate_pdf(request: dict):
         raise HTTPException(status_code=500, detail=str(e))
 
 if __name__ == "__main__":
-    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
+    uvicorn.run("main:app", host="127.0.0.1", port=8000, reload=True)
