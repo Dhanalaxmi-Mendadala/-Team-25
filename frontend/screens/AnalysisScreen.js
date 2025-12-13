@@ -8,16 +8,21 @@ import {
     TouchableOpacity,
     ActivityIndicator,
     Alert,
-    StatusBar
+    StatusBar,
+    Platform
 } from 'react-native';
+import * as FileSystem from 'expo-file-system';
+import * as Sharing from 'expo-sharing';
 import { COLORS, SIZES, SHADOWS } from '../constants/theme';
 import { analyzePrescriptionWithAI } from '../utils/analysis';
 import { savePrescription } from '../utils/storage';
+import { API_BASE_URL } from '../constants/config';
 
 const AnalysisScreen = ({ route, navigation }) => {
     const { data } = route.params;
     const [analysis, setAnalysis] = useState(null);
     const [loading, setLoading] = useState(true);
+    const [exporting, setExporting] = useState(false);
 
     useEffect(() => {
         const fetchAnalysis = async () => {
@@ -50,6 +55,53 @@ const AnalysisScreen = ({ route, navigation }) => {
             await savePrescription(analysis.structured_prescription);
             Alert.alert('Success', 'Prescription Saved to Records!');
             navigation.navigate('Prescription');
+        }
+    };
+
+    const handleExportPdf = async () => {
+        if (!analysis) return;
+
+        try {
+            setExporting(true);
+            const response = await fetch(`${API_BASE_URL}/api/generate-pdf`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(analysis),
+            });
+
+            if (!response.ok) {
+                throw new Error("Failed to generate PDF");
+            }
+
+            // Handle Blob/File download
+            const blob = await response.blob();
+
+            // Convert blob to base64
+            const reader = new FileReader();
+            reader.readAsDataURL(blob);
+            reader.onloadend = async () => {
+                const base64data = reader.result.split(',')[1];
+                const filename = `Prescription_Report_${Date.now()}.pdf`;
+                const fileUri = FileSystem.documentDirectory + filename;
+
+                await FileSystem.writeAsStringAsync(fileUri, base64data, {
+                    encoding: FileSystem.EncodingType.Base64,
+                });
+
+                if (await Sharing.isAvailableAsync()) {
+                    await Sharing.shareAsync(fileUri);
+                } else {
+                    Alert.alert("Saved", `PDF saved to ${fileUri}`);
+                }
+            };
+
+        } catch (error) {
+            console.error(error);
+            Alert.alert("Export Failed", "Could not export PDF. Please try again.");
+        } finally {
+            setExporting(false);
         }
     };
 
@@ -136,9 +188,15 @@ const AnalysisScreen = ({ route, navigation }) => {
                     )}
                 </View>
 
-                <TouchableOpacity style={styles.approveButton} onPress={handleFinalize}>
-                    <Text style={styles.approveButtonText}>Approve & Save</Text>
-                </TouchableOpacity>
+                <View style={styles.buttonRow}>
+                    <TouchableOpacity style={[styles.actionButton, styles.exportButton]} onPress={handleExportPdf} disabled={exporting}>
+                        {exporting ? <ActivityIndicator color={COLORS.primary} size="small" /> : <Text style={styles.exportButtonText}>📄 Export PDF</Text>}
+                    </TouchableOpacity>
+
+                    <TouchableOpacity style={[styles.actionButton, styles.approveButton]} onPress={handleFinalize}>
+                        <Text style={styles.approveButtonText}>Approve & Save</Text>
+                    </TouchableOpacity>
+                </View>
 
             </ScrollView>
         </SafeAreaView>
@@ -169,6 +227,7 @@ const styles = StyleSheet.create({
     },
     scrollContent: {
         padding: SIZES.padding,
+        paddingBottom: 40
     },
     headerTitle: {
         fontSize: 24,
@@ -313,16 +372,35 @@ const styles = StyleSheet.create({
         fontStyle: 'italic',
         marginTop: 10
     },
-    approveButton: {
-        backgroundColor: COLORS.primary, // Teal
+    buttonRow: {
+        flexDirection: 'row',
+        gap: 15,
+        marginBottom: 20
+    },
+    actionButton: {
+        flex: 1,
         paddingVertical: 18,
         borderRadius: 16,
         alignItems: 'center',
+        justifyContent: 'center',
         ...SHADOWS.medium
+    },
+    approveButton: {
+        backgroundColor: COLORS.primary,
     },
     approveButtonText: {
         color: COLORS.white,
-        fontSize: 18,
+        fontSize: 16,
+        fontWeight: 'bold',
+    },
+    exportButton: {
+        backgroundColor: COLORS.white,
+        borderWidth: 1,
+        borderColor: COLORS.primary
+    },
+    exportButtonText: {
+        color: COLORS.primary,
+        fontSize: 16,
         fontWeight: 'bold',
     }
 });

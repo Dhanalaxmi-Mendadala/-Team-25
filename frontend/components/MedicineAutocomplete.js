@@ -6,10 +6,12 @@ import {
     TouchableOpacity,
     StyleSheet,
     FlatList,
-    Modal
+    Modal,
+    Platform
 } from 'react-native';
 import Fuse from 'fuse.js';
-import { COLORS, SIZES } from '../constants/theme';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { COLORS, SIZES, SHADOWS } from '../constants/theme';
 import { MEDICINES_DATA } from '../constants/medicines';
 
 const MedicineAutocomplete = ({ onAddMedicine }) => {
@@ -69,13 +71,21 @@ const MedicineAutocomplete = ({ onAddMedicine }) => {
 
     return (
         <View style={styles.container}>
-            <Text style={styles.label}>Add Medicine</Text>
-            <TextInput
-                style={styles.input}
-                placeholder="Type medicine name (e.g. Paracetamol)..."
-                value={query}
-                onChangeText={handleSearch}
-            />
+            <View style={styles.searchWrapper}>
+                <MaterialCommunityIcons name="pill" size={20} color={COLORS.secondary} style={styles.searchIcon} />
+                <TextInput
+                    style={styles.input}
+                    placeholder="Search medicine (e.g. Paracetamol)..."
+                    placeholderTextColor={COLORS.muted}
+                    value={query}
+                    onChangeText={handleSearch}
+                />
+                {query.length > 0 && (
+                    <TouchableOpacity onPress={() => { setQuery(''); setSuggestions([]); }}>
+                        <MaterialCommunityIcons name="close" size={20} color={COLORS.muted} />
+                    </TouchableOpacity>
+                )}
+            </View>
 
             {suggestions.length > 0 && (
                 <View style={styles.suggestionsList}>
@@ -85,49 +95,79 @@ const MedicineAutocomplete = ({ onAddMedicine }) => {
                             style={styles.suggestionItem}
                             onPress={() => handleSelectMedicine(item)}
                         >
-                            <Text>{item.name} <Text style={{ fontSize: 10, color: '#888' }}>({item.type})</Text></Text>
+                            <View style={styles.suggestionIcon}>
+                                <MaterialCommunityIcons name="medical-bag" size={16} color={COLORS.primary} />
+                            </View>
+                            <View>
+                                <Text style={styles.suggestionText}>{item.name}</Text>
+                                <Text style={styles.suggestionType}>{item.type}</Text>
+                            </View>
                         </TouchableOpacity>
                     ))}
                 </View>
             )}
 
             {/* Modal for Dosage Details */}
-            <Modal visible={showModal} transparent animationType="slide">
+            <Modal visible={showModal} transparent animationType="fade">
                 <View style={styles.modalOverlay}>
                     <View style={styles.modalContent}>
-                        <Text style={styles.modalTitle}>{selectedMed?.name}</Text>
+                        <View style={styles.modalHeader}>
+                            <MaterialCommunityIcons name="pill" size={28} color={COLORS.primary} />
+                            <Text style={styles.modalTitle}>{selectedMed?.name}</Text>
+                        </View>
+                        <Text style={styles.modalSubtitle}>Enter Dosage Details</Text>
 
-                        <TextInput
-                            style={styles.modalInput}
-                            placeholder="Dosage (e.g. 500mg)"
-                            value={dosage}
-                            onChangeText={setDosage}
-                        />
-                        <TextInput
-                            style={styles.modalInput}
-                            placeholder="Frequency (e.g. 1-0-1)"
-                            value={frequency}
-                            onChangeText={setFrequency}
-                        />
-                        <TextInput
-                            style={styles.modalInput}
-                            placeholder="Duration (e.g. 3 days)"
-                            value={duration}
-                            onChangeText={setDuration}
-                        />
-                        <TextInput
-                            style={styles.modalInput}
-                            placeholder="Notes (e.g. After food)"
-                            value={notes}
-                            onChangeText={setNotes}
-                        />
+                        <View style={styles.modalInputWrapper}>
+                            <MaterialCommunityIcons name="needle" size={20} color={COLORS.secondary} style={styles.modalInputIcon} />
+                            <TextInput
+                                style={styles.modalInput}
+                                placeholder="Dosage (e.g. 500mg)"
+                                placeholderTextColor={COLORS.muted}
+                                value={dosage}
+                                onChangeText={setDosage}
+                            />
+                        </View>
+
+                        <View style={styles.row}>
+                            <View style={[styles.modalInputWrapper, { flex: 1, marginRight: 10 }]}>
+                                <MaterialCommunityIcons name="clock-outline" size={20} color={COLORS.secondary} style={styles.modalInputIcon} />
+                                <TextInput
+                                    style={styles.modalInput}
+                                    placeholder="Freq (1-0-1)"
+                                    placeholderTextColor={COLORS.muted}
+                                    value={frequency}
+                                    onChangeText={setFrequency}
+                                />
+                            </View>
+                            <View style={[styles.modalInputWrapper, { flex: 1 }]}>
+                                <MaterialCommunityIcons name="calendar-range" size={20} color={COLORS.secondary} style={styles.modalInputIcon} />
+                                <TextInput
+                                    style={styles.modalInput}
+                                    placeholder="Days (5)"
+                                    placeholderTextColor={COLORS.muted}
+                                    value={duration}
+                                    onChangeText={setDuration}
+                                />
+                            </View>
+                        </View>
+
+                        <View style={styles.modalInputWrapper}>
+                            <MaterialCommunityIcons name="note-text-outline" size={20} color={COLORS.secondary} style={styles.modalInputIcon} />
+                            <TextInput
+                                style={styles.modalInput}
+                                placeholder="Notes (e.g. After food)"
+                                placeholderTextColor={COLORS.muted}
+                                value={notes}
+                                onChangeText={setNotes}
+                            />
+                        </View>
 
                         <View style={styles.modalButtons}>
-                            <TouchableOpacity style={[styles.modalBtn, { backgroundColor: COLORS.secondary }]} onPress={() => setShowModal(false)}>
-                                <Text style={styles.btnText}>Cancel</Text>
+                            <TouchableOpacity style={[styles.modalBtn, styles.cancelBtn]} onPress={() => setShowModal(false)}>
+                                <Text style={[styles.btnText, { color: COLORS.secondary }]}>Cancel</Text>
                             </TouchableOpacity>
-                            <TouchableOpacity style={[styles.modalBtn, { backgroundColor: COLORS.primary }]} onPress={handleConfirmAdd}>
-                                <Text style={styles.btnText}>Add</Text>
+                            <TouchableOpacity style={[styles.modalBtn, styles.addBtn]} onPress={handleConfirmAdd}>
+                                <Text style={styles.btnText}>Add Medicine</Text>
                             </TouchableOpacity>
                         </View>
                     </View>
@@ -139,78 +179,140 @@ const MedicineAutocomplete = ({ onAddMedicine }) => {
 
 const styles = StyleSheet.create({
     container: {
-        zIndex: 10, // Ensure suggestions float on top
+        zIndex: 10,
+        marginBottom: 10
     },
-    label: {
-        fontSize: SIZES.small,
-        color: COLORS.secondary,
-        marginBottom: 4,
+    searchWrapper: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: COLORS.light,
+        borderRadius: 10,
+        borderWidth: 1,
+        borderColor: COLORS.border,
+        paddingHorizontal: 12,
+        paddingVertical: Platform.OS === 'ios' ? 12 : 2
+    },
+    searchIcon: {
+        marginRight: 10
     },
     input: {
-        borderWidth: 1,
-        borderColor: COLORS.primary,
-        borderRadius: SIZES.borderRadius,
-        padding: 10,
-        backgroundColor: COLORS.white,
+        flex: 1,
+        fontSize: 16,
+        color: COLORS.text,
+        paddingVertical: 10
     },
     suggestionsList: {
         position: 'absolute',
-        top: 65,
+        top: 55,
         left: 0,
         right: 0,
         backgroundColor: COLORS.white,
-        borderWidth: 1,
-        borderColor: COLORS.border,
-        borderRadius: SIZES.borderRadius,
-        elevation: 5,
+        borderRadius: 12,
+        ...SHADOWS.medium,
         zIndex: 20,
-        maxHeight: 150,
+        maxHeight: 200,
+        paddingVertical: 5
     },
     suggestionItem: {
-        padding: 10,
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingVertical: 12,
+        paddingHorizontal: 15,
         borderBottomWidth: 1,
         borderBottomColor: COLORS.light,
     },
+    suggestionIcon: {
+        width: 32,
+        height: 32,
+        borderRadius: 16,
+        backgroundColor: COLORS.light,
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginRight: 12
+    },
+    suggestionText: {
+        fontSize: 16,
+        fontWeight: '500',
+        color: COLORS.text
+    },
+    suggestionType: {
+        fontSize: 12,
+        color: COLORS.secondary
+    },
     modalOverlay: {
         flex: 1,
-        backgroundColor: 'rgba(0,0,0,0.5)',
+        backgroundColor: 'rgba(0,0,0,0.6)',
         justifyContent: 'center',
-        padding: SIZES.padding,
+        padding: 20,
     },
     modalContent: {
         backgroundColor: COLORS.white,
-        padding: SIZES.padding,
-        borderRadius: SIZES.borderRadius,
+        borderRadius: 24,
+        padding: 24,
+        ...SHADOWS.medium
+    },
+    modalHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginBottom: 5,
+        gap: 10
     },
     modalTitle: {
-        fontSize: SIZES.h2,
+        fontSize: 22,
         fontWeight: 'bold',
-        marginBottom: SIZES.padding,
         color: COLORS.primary,
     },
-    modalInput: {
+    modalSubtitle: {
+        fontSize: 14,
+        color: COLORS.secondary,
+        marginBottom: 20
+    },
+    row: {
+        flexDirection: 'row',
+        marginBottom: 15
+    },
+    modalInputWrapper: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: COLORS.light,
+        borderRadius: 12,
         borderWidth: 1,
         borderColor: COLORS.border,
-        borderRadius: SIZES.borderRadius,
-        padding: 10,
-        marginBottom: 10,
+        paddingHorizontal: 12,
+        marginBottom: 15
+    },
+    modalInputIcon: {
+        marginRight: 10
+    },
+    modalInput: {
+        flex: 1,
+        paddingVertical: 12,
+        fontSize: 16,
+        color: COLORS.text
     },
     modalButtons: {
         flexDirection: 'row',
-        justifyContent: 'flex-end',
-        marginTop: 10,
+        gap: 15,
+        marginTop: 10
     },
     modalBtn: {
-        paddingVertical: 10,
-        paddingHorizontal: 20,
-        borderRadius: SIZES.borderRadius,
-        marginLeft: 10,
+        flex: 1,
+        paddingVertical: 15,
+        borderRadius: 12,
+        alignItems: 'center',
+    },
+    cancelBtn: {
+        backgroundColor: COLORS.light,
+    },
+    addBtn: {
+        backgroundColor: COLORS.primary,
+        ...SHADOWS.small
     },
     btnText: {
-        color: COLORS.white,
         fontWeight: 'bold',
+        fontSize: 16,
+        color: COLORS.white
     }
-
 });
 
 export default MedicineAutocomplete;

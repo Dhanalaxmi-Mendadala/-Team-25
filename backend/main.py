@@ -45,5 +45,22 @@ async def analyze_prescription(request: PrescriptionRequest):
         # Return a 500 or appropriate error, passing the message for debugging if needed
         raise HTTPException(status_code=500, detail=str(e))
 
+from fastapi.responses import StreamingResponse
+from pdf_service import generate_prescription_pdf
+
+@app.post("/api/generate-pdf")
+async def generate_pdf(request: dict):
+    # Expecting the full analysis object
+    try:
+        pdf_buffer = generate_prescription_pdf(request)
+        return StreamingResponse(
+            pdf_buffer, 
+            media_type="application/pdf", 
+            headers={"Content-Disposition": "attachment; filename=prescription_report.pdf"}
+        )
+    except Exception as e:
+        print(f"PDF Error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 if __name__ == "__main__":
     uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
