@@ -71,9 +71,10 @@ const AnalysisScreen = ({ route, navigation }) => {
                 },
                 body: JSON.stringify(analysis),
             });
-
+            console.log(response);
             if (!response.ok) {
-                throw new Error("Failed to generate PDF");
+                const errorText = await response.text();
+                throw new Error(`Failed to generate PDF: ${response.status} - ${errorText}`);
             }
 
             // Handle Blob/File download
@@ -83,24 +84,29 @@ const AnalysisScreen = ({ route, navigation }) => {
             const reader = new FileReader();
             reader.readAsDataURL(blob);
             reader.onloadend = async () => {
-                const base64data = reader.result.split(',')[1];
-                const filename = `Prescription_Report_${Date.now()}.pdf`;
-                const fileUri = FileSystem.documentDirectory + filename;
+                try {
+                    const base64data = reader.result.split(',')[1];
+                    const filename = `Prescription_Report_${Date.now()}.pdf`;
+                    const fileUri = FileSystem.documentDirectory + filename;
 
-                await FileSystem.writeAsStringAsync(fileUri, base64data, {
-                    encoding: FileSystem.EncodingType.Base64,
-                });
+                    await FileSystem.writeAsStringAsync(fileUri, base64data, {
+                        encoding: FileSystem.EncodingType.Base64,
+                    });
 
-                if (await Sharing.isAvailableAsync()) {
-                    await Sharing.shareAsync(fileUri);
-                } else {
-                    Alert.alert("Saved", `PDF saved to ${fileUri}`);
+                    if (await Sharing.isAvailableAsync()) {
+                        await Sharing.shareAsync(fileUri);
+                    } else {
+                        Alert.alert("Saved", `PDF saved to ${fileUri}`);
+                    }
+                } catch (saveError) {
+                    console.error("Save/Share Error:", saveError);
+                    Alert.alert("Export Error", "Failed to save or share the PDF.");
                 }
             };
 
         } catch (error) {
-            console.error(error);
-            Alert.alert("Export Failed", "Could not export PDF. Please try again.");
+            console.error("Export API Error:", error);
+            Alert.alert("Export Failed", "Could not export PDF. Please check your connection and try again.");
         } finally {
             setExporting(false);
         }
