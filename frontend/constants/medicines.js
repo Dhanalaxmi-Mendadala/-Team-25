@@ -1,0 +1,17 @@
+export const MEDICINES_DATA = [
+    { id: '1', name: 'Paracetamol', type: 'Tablet' },
+    { id: '2', name: 'Ibuprofen', type: 'Tablet' },
+    { id: '3', name: 'Amoxicillin', type: 'Capsule' },
+    { id: '4', name: 'Cetirizine', type: 'Tablet' },
+    { id: '5', name: 'Metformin', type: 'Tablet' },
+    { id: '6', name: 'Aspirin', type: 'Tablet' },
+    { id: '7', name: 'Azithromycin', type: 'Tablet' },
+    { id: '8', name: 'Omeprazole', type: 'Capsule' },
+    { id: '9', name: 'Losartan', type: 'Tablet' },
+    { id: '10', name: 'Atorvastatin', type: 'Tablet' },
+    { id: '11', name: 'Pantoprazole', type: 'Tablet' },
+    { id: '12', name: 'Montelukast', type: 'Tablet' },
+    { id: '13', name: 'Dolo 650', type: 'Tablet' },
+    { id: '14', name: 'Augmentin', type: 'Tablet' },
+    { id: '15', name: 'Ciprofloxacin', type: 'Tablet' },
+];
