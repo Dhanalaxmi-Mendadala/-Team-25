@@ -52,81 +52,69 @@ const AnalysisScreen = ({ route, navigation }) => {
         fetchAnalysis();
     }, [data]);
 
+    const handleFinalize = async () => {
+        if (analysis && analysis.structured_prescription) {
+            await savePrescription(analysis.structured_prescription);
+            Alert.alert('Success', 'Prescription Saved to Records!');
+            navigation.navigate('Prescription');
+        }
+    };
 
-// 🔹 PDF EXPORT FUNCTION
-const handleExportPdf = async () => {
-    if (!analysis) return;
-
-    try {
-        setExporting(true);
-
-        // 1️⃣ Call backend to generate PDF
-        const response = await fetch(`${API_BASE_URL}/api/generate-pdf`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(analysis),
-        });
-
-        console.log('Response status:', response.status);
-        console.log('Response content-type:', response.headers.get('content-type'));
-
-        if (!response.ok) {
-            const errorText = await response.text();
-            throw new Error(`Failed to generate PDF: ${response.status} - ${errorText}`);
+    const handleExportPdf = async () => {
+        if (!analysis) {
+            Alert.alert("No Analysis", "Please define a prescription first.");
+            return;
         }
 
-        // 2️⃣ Ensure backend returned PDF
-        const contentType = response.headers.get('content-type');
-        if (!contentType || !contentType.includes('application/pdf')) {
-            throw new Error(`Invalid response type: ${contentType}`);
+        try {
+            setExporting(true);
+            const response = await fetch(`${API_BASE_URL}/api/generate-pdf`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(analysis),
+            });
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                // Extract useful error info if possible
+                let friendlyError = "Something went wrong on the server.";
+                try {
+                    const errObj = JSON.parse(errorText);
+                    if (errObj.detail) friendlyError = errObj.detail;
+                } catch (e) {
+                    friendlyError = errorText.substring(0, 100); // Limit length
+                }
+                throw new Error(`Server Error: ${friendlyError}`);
+            }
+
+            const data = await response.json();
+
+            if (data.pdf_base64) {
+                const filename = `Prescription_Report_${Date.now()}.pdf`;
+                const fileUri = FileSystem.documentDirectory + filename;
+
+                await FileSystem.writeAsStringAsync(fileUri, data.pdf_base64, {
+                    encoding: FileSystem.EncodingType.Base64,
+                });
+
+                if (await Sharing.isAvailableAsync()) {
+                    await Sharing.shareAsync(fileUri);
+                } else {
+                    Alert.alert("Saved", `PDF saved to ${fileUri}`);
+                }
+            } else {
+                throw new Error("Received invalid data from server (missing PDF).");
+            }
+
+        } catch (error) {
+            console.error("Export API Error:", error);
+            Alert.alert("Export Failed", error.message || "Could not export PDF. Please check your connection.");
+        } finally {
+            setExporting(false);
         }
-
-        // 3️⃣ Read PDF as ArrayBuffer
-        const arrayBuffer = await response.arrayBuffer();
-        if (!arrayBuffer || arrayBuffer.byteLength === 0) {
-            throw new Error('No PDF data received');
-        }
-
-        // 4️⃣ Convert ArrayBuffer → Base64
-        const uint8Array = new Uint8Array(arrayBuffer);
-        let binary = '';
-        for (let i = 0; i < uint8Array.length; i++) {
-            binary += String.fromCharCode(uint8Array[i]);
-        }
-        const base64Data = encode(binary);
-
-        // 5️⃣ Save PDF to app document directory
-        const filename = `Prescription_Report_${Date.now()}.pdf`;
-        const fileUri = FileSystem.documentDirectory + filename;
-
-        console.log('Saving PDF to:', fileUri);
-
-        await FileSystem.writeAsStringAsync(
-            fileUri,
-            base64Data,
-            { encoding: FileSystem.EncodingType.Base64 }
-        );
-
-        console.log('PDF saved successfully');
-
-        // 6️⃣ Notify user
-        Alert.alert(
-            'PDF Downloaded',
-            `PDF saved successfully.\n\nLocation:\n${fileUri}`
-        );
-
-    } catch (error) {
-        console.error('Export Error:', error);
-        Alert.alert(
-            'Export Failed',
-            error.message || 'Could not download PDF'
-        );
-    } finally {
-        setExporting(false);
-    }
-};
+    };
 
     const handleFinalize = async () => {
         if (analysis && analysis.structured_prescription) {

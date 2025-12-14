@@ -1,8 +1,7 @@
-import os
-import uvicorn
+import logging
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from dotenv import load_dotenv
 from gemini_service import analyze_prescription_text
 import pandas as pd
@@ -21,8 +20,12 @@ app.add_middleware(
     allow_headers=["*"],  # Allows all headers
 )
 
+# Configure Logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
 class PrescriptionRequest(BaseModel):
-    text: str
+    text: str = Field(..., min_length=10, max_length=5000, description="Raw prescription text to analyze")
 
 # --- Medicine Data Loading ---
 MEDICINE_DB = None
@@ -33,13 +36,13 @@ def load_medicine_data():
     
     # Auto-download if not present
     if not os.path.exists(csv_path):
-        print("medicines.csv not found. Attempting to download from Kaggle...")
+        logger.info("medicines.csv not found. Attempting to download from Kaggle...")
         try:
             from download_data import download_medicine_dataset
             download_medicine_dataset()
         except Exception as e:
-            print(f"Failed to auto-download dataset: {e}")
-            print("Real-time search will be disabled.")
+            logger.error(f"Failed to auto-download dataset: {e}")
+            logger.warning("Real-time search will be disabled.")
             return
     
     if os.path.exists(csv_path):
@@ -71,13 +74,13 @@ def load_medicine_data():
                 MEDICINE_DB = df[actual_cols].dropna(subset=['name'])
                 # Convert name to string just in case
                 MEDICINE_DB['name'] = MEDICINE_DB['name'].astype(str)
-                print(f"Loaded {len(MEDICINE_DB)} medicines.")
+                logger.info(f"Loaded {len(MEDICINE_DB)} medicines.")
             else:
-                print("Could not find a 'name' column in medicines.csv")
+                logger.warning("Could not find a 'name' column in medicines.csv")
         except Exception as e:
-            print(f"Error loading medicines.csv: {e}")
+            logger.error(f"Error loading medicines.csv: {e}")
     else:
-        print("medicines.csv still not found after download attempt. Real-time search will be disabled.")
+        logger.warning("medicines.csv still not found after download attempt. Real-time search will be disabled.")
 
 # Load on startup
 load_medicine_data()
@@ -136,7 +139,7 @@ async def analyze_prescription(request: PrescriptionRequest):
         # Check if AI returned an error
         if result.get("error"):
             error_msg = result.get("error", "Unknown error")
-            print(f"AI Analysis Error: {error_msg}")
+            logger.error(f"AI Analysis Error: {error_msg}")
             
             # Return a user-friendly error response
             return {
@@ -152,13 +155,13 @@ async def analyze_prescription(request: PrescriptionRequest):
                 "structured_prescription": []
             }
         
-        print(f"Analysis successful: Score={result.get('score', 'N/A')}")
+        logger.info(f"Analysis successful: Score={result.get('score', 'N/A')}")
         return result
         
     except HTTPException:
         raise
     except Exception as e:
-        print(f"Error processing prescription: {e}")
+        logger.error(f"Error processing prescription: {e}")
         raise HTTPException(status_code=500, detail=f"Server error: {str(e)}")
 
 from fastapi.responses import StreamingResponse
@@ -168,14 +171,16 @@ from pdf_service import generate_prescription_pdf
 async def generate_pdf(request: dict):
     # Expecting the full analysis object
     try:
+        import base64
         pdf_buffer = generate_prescription_pdf(request)
-        return StreamingResponse(
-            pdf_buffer, 
-            media_type="application/pdf", 
-            headers={"Content-Disposition": "attachment; filename=prescription_report.pdf"}
-        )
+        pdf_base64 = base64.b64encode(pdf_buffer.getvalue()).decode('utf-8')
+        
+        return {
+            "pdf_base64": pdf_base64,
+            "filename": "prescription_report.pdf"
+        }
     except Exception as e:
-        print(f"PDF Error: {e}")
+        logger.error(f"PDF Error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 if __name__ == "__main__":
