@@ -60,6 +60,48 @@ const PrescriptionScreen = ({ navigation }) => {
     const [medicines, setMedicines] = useState([]);
     const [errors, setErrors] = useState({});
 
+    // Collapsible State
+    const [isPatientCollapsed, setIsPatientCollapsed] = useState(false);
+    const [isVitalsCollapsed, setIsVitalsCollapsed] = useState(false);
+
+    // Track if we have already auto-collapsed to avoid fighting the user
+    const hasAutoCollapsedPatient = React.useRef(false);
+    const hasAutoCollapsedVitals = React.useRef(false);
+
+    // Auto-collapse Patient Info
+    React.useEffect(() => {
+        const isPatientComplete = form.patientName && form.age && form.sex;
+        if (isPatientComplete && !hasAutoCollapsedPatient.current) {
+            LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+            setIsPatientCollapsed(true);
+            hasAutoCollapsedPatient.current = true;
+        }
+    }, [form.patientName, form.age, form.sex]);
+
+    // Auto-collapse Vitals
+    React.useEffect(() => {
+        // Vitals are technically optional, but we collapse if the main ones are filled
+        // Or if the user enters a specific set. Let's use a "completeness" check.
+        // If at least 3 fields are filled, we can consider it "fully entered" enough for auto-collapse?
+        // Or strictly if ALL 4 are filled. The user said "fully entered". Let's assume all 4 for now.
+        const isVitalsComplete = form.bp && form.temperature && form.weight && form.pulse;
+        if (isVitalsComplete && !hasAutoCollapsedVitals.current) {
+            LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+            setIsVitalsCollapsed(true);
+            hasAutoCollapsedVitals.current = true;
+        }
+    }, [form.bp, form.temperature, form.weight, form.pulse]);
+
+    const togglePatient = () => {
+        LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+        setIsPatientCollapsed(!isPatientCollapsed);
+    };
+
+    const toggleVitals = () => {
+        LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+        setIsVitalsCollapsed(!isVitalsCollapsed);
+    };
+
     // Handlers
     const handleChange = (field, value) => {
         setForm(prev => ({ ...prev, [field]: value }));
@@ -110,10 +152,40 @@ const PrescriptionScreen = ({ navigation }) => {
             const fieldErrors = {};
             // Use issues or errors depending on Zod version/environment
             const zodErrors = result.error.issues || result.error.errors || [];
+
+            let hasPatientError = false;
+            let hasVitalsError = false;
+
             zodErrors.forEach(err => {
-                if (err.path[0]) fieldErrors[err.path[0]] = err.message;
+                const path = err.path[0];
+                if (path) {
+                    fieldErrors[path] = err.message;
+
+                    // Check which section this error belongs to
+                    if (['patientName', 'age', 'sex'].includes(path)) {
+                        hasPatientError = true;
+                    }
+                    if (['temperature', 'bp', 'weight', 'pulse'].includes(path)) {
+                        hasVitalsError = true;
+                    }
+                }
             });
+
             setErrors(fieldErrors);
+
+            // Auto-expand sections with errors
+            if (hasPatientError) {
+                setIsPatientCollapsed(false);
+            }
+            if (hasVitalsError) {
+                setIsVitalsCollapsed(false);
+            }
+
+            // Layout animation for smooth expansion
+            if (hasPatientError || hasVitalsError) {
+                LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+            }
+
             Alert.alert("Validation Error", "Please check the highlighted fields.");
             return;
         }
@@ -147,7 +219,7 @@ const PrescriptionScreen = ({ navigation }) => {
             </View>
             <View style={{ flex: 1, marginLeft: 15 }}>
                 <Text style={styles.medName}>{item.name}</Text>
-                <Text style={styles.medDetails}>{item.dosage} • {item.frequency} • {item.duration}</Text>
+                <Text style={styles.medDetails}>{item.frequency} • {item.duration}</Text>
                 {item.notes ? <Text style={styles.medNotes}>📝 {item.notes}</Text> : null}
             </View>
             <TouchableOpacity onPress={() => removeMedicine(item.id)} style={styles.deleteButton}>
@@ -160,7 +232,11 @@ const PrescriptionScreen = ({ navigation }) => {
         <View style={styles.container}>
             <StatusBar barStyle="dark-content" backgroundColor={COLORS.background} />
             <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={{ flex: 1 }}>
-                <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
+                <ScrollView
+                    style={{ flex: 1 }}
+                    contentContainerStyle={styles.scrollContent}
+                    keyboardShouldPersistTaps="handled"
+                >
 
                     {/* Header */}
                     <View style={styles.header}>
@@ -175,81 +251,113 @@ const PrescriptionScreen = ({ navigation }) => {
 
                     {/* Patient Info Card */}
                     <View style={styles.card}>
-                        <View style={styles.cardHeaderRow}>
-                            <MaterialCommunityIcons name="account-details" size={20} color={COLORS.primary} />
-                            <Text style={styles.cardTitle}>Patient Details</Text>
-                        </View>
-
-                        <View style={styles.row}>
-                            <View style={{ flex: 2, marginRight: 10 }}>
-                                <InputWithIcon
-                                    label="Full Name"
-                                    icon="account"
-                                    placeholder="John Doe"
-                                    value={form.patientName}
-                                    onChangeText={(t) => handleChange('patientName', t)}
-                                    error={errors.patientName}
-                                />
+                        <TouchableOpacity style={styles.cardHeaderRow} onPress={togglePatient} activeOpacity={0.7}>
+                            <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1, gap: 8 }}>
+                                <MaterialCommunityIcons name="account-details" size={20} color={COLORS.primary} />
+                                <Text style={styles.cardTitle}>Patient Details</Text>
                             </View>
-                            <View style={{ flex: 1 }}>
-                                <InputWithIcon
-                                    label="Age"
-                                    icon="calendar-account"
-                                    placeholder="Yrs"
-                                    keyboardType="numeric"
-                                    value={form.age}
-                                    onChangeText={(t) => handleChange('age', t)}
-                                    error={errors.age}
-                                />
-                            </View>
-                        </View>
+                            {isPatientCollapsed && (
+                                <Text style={styles.summaryText} numberOfLines={1}>
+                                    {form.patientName}, {form.age} {form.sex === 'Male' ? 'M' : form.sex === 'Female' ? 'F' : form.sex}
+                                </Text>
+                            )}
+                            <MaterialCommunityIcons
+                                name={isPatientCollapsed ? "chevron-down" : "chevron-up"}
+                                size={24}
+                                color={COLORS.secondary}
+                            />
+                        </TouchableOpacity>
 
-                        <View style={styles.inputContainer}>
-                            <Text style={styles.label}>Gender</Text>
-                            <View style={[styles.genderRow, errors.sex && { borderColor: COLORS.danger, borderWidth: 1, borderRadius: 8, padding: 4 }]}>
-                                {['Male', 'Female', 'Other'].map((option) => (
-                                    <TouchableOpacity
-                                        key={option}
-                                        style={[styles.genderChip, form.sex === option && styles.genderChipActive]}
-                                        onPress={() => handleChange('sex', option)}
-                                    >
-                                        <MaterialCommunityIcons
-                                            name={option === 'Male' ? 'gender-male' : option === 'Female' ? 'gender-female' : 'gender-transgender'}
-                                            size={16}
-                                            color={form.sex === option ? COLORS.white : COLORS.secondary}
-                                            style={{ marginRight: 5 }}
+                        {!isPatientCollapsed && (
+                            <View>
+                                <View style={styles.row}>
+                                    <View style={{ flex: 2, marginRight: 10 }}>
+                                        <InputWithIcon
+                                            label="Full Name"
+                                            icon="account"
+                                            placeholder="John Doe"
+                                            value={form.patientName}
+                                            onChangeText={(t) => handleChange('patientName', t)}
+                                            error={errors.patientName}
                                         />
-                                        <Text style={[styles.genderText, form.sex === option && styles.genderTextActive]}>{option}</Text>
-                                    </TouchableOpacity>
-                                ))}
+                                    </View>
+                                    <View style={{ flex: 1 }}>
+                                        <InputWithIcon
+                                            label="Age"
+                                            icon="calendar-account"
+                                            placeholder="Yrs"
+                                            keyboardType="numeric"
+                                            value={form.age}
+                                            onChangeText={(t) => handleChange('age', t)}
+                                            error={errors.age}
+                                        />
+                                    </View>
+                                </View>
+
+                                <View style={styles.inputContainer}>
+                                    <Text style={styles.label}>Gender</Text>
+                                    <View style={[styles.genderRow, errors.sex && { borderColor: COLORS.danger, borderWidth: 1, borderRadius: 8, padding: 4 }]}>
+                                        {['Male', 'Female', 'Other'].map((option) => (
+                                            <TouchableOpacity
+                                                key={option}
+                                                style={[styles.genderChip, form.sex === option && styles.genderChipActive]}
+                                                onPress={() => handleChange('sex', option)}
+                                            >
+                                                <MaterialCommunityIcons
+                                                    name={option === 'Male' ? 'gender-male' : option === 'Female' ? 'gender-female' : 'gender-transgender'}
+                                                    size={16}
+                                                    color={form.sex === option ? COLORS.white : COLORS.secondary}
+                                                    style={{ marginRight: 5 }}
+                                                />
+                                                <Text style={[styles.genderText, form.sex === option && styles.genderTextActive]}>{option}</Text>
+                                            </TouchableOpacity>
+                                        ))}
+                                    </View>
+                                    {errors.sex && <Text style={styles.errorText}>{errors.sex}</Text>}
+                                </View>
                             </View>
-                            {errors.sex && <Text style={styles.errorText}>{errors.sex}</Text>}
-                        </View>
+                        )}
                     </View>
 
                     {/* Vitals Card */}
                     <View style={styles.card}>
-                        <View style={styles.cardHeaderRow}>
-                            <MaterialCommunityIcons name="heart-pulse" size={20} color={COLORS.primary} />
-                            <Text style={styles.cardTitle}>Vitals</Text>
-                        </View>
+                        <TouchableOpacity style={styles.cardHeaderRow} onPress={toggleVitals} activeOpacity={0.7}>
+                            <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1, gap: 8 }}>
+                                <MaterialCommunityIcons name="heart-pulse" size={20} color={COLORS.primary} />
+                                <Text style={styles.cardTitle}>Vitals</Text>
+                            </View>
+                            {isVitalsCollapsed && (
+                                <Text style={styles.summaryText} numberOfLines={1}>
+                                    {form.bp || '-'} • {form.temperature ? `${form.temperature}°` : '-'} • {form.weight ? `${form.weight}kg` : '-'}
+                                </Text>
+                            )}
+                            <MaterialCommunityIcons
+                                name={isVitalsCollapsed ? "chevron-down" : "chevron-up"}
+                                size={24}
+                                color={COLORS.secondary}
+                            />
+                        </TouchableOpacity>
 
-                        <View style={styles.gridRow}>
-                            <View style={styles.gridItem}>
-                                <InputWithIcon label="BP" icon="gauge" placeholder="120/80" value={form.bp} onChangeText={(t) => handleChange('bp', t)} error={errors.bp} />
+                        {!isVitalsCollapsed && (
+                            <View>
+                                <View style={styles.gridRow}>
+                                    <View style={styles.gridItem}>
+                                        <InputWithIcon label="BP" icon="gauge" placeholder="120/80" value={form.bp} onChangeText={(t) => handleChange('bp', t)} error={errors.bp} />
+                                    </View>
+                                    <View style={styles.gridItem}>
+                                        <InputWithIcon label="Temp (°F)" icon="thermometer" placeholder="98.6" keyboardType="numeric" value={form.temperature} onChangeText={(t) => handleChange('temperature', t)} error={errors.temperature} />
+                                    </View>
+                                </View>
+                                <View style={[styles.gridRow, { marginTop: 10 }]}>
+                                    <View style={styles.gridItem}>
+                                        <InputWithIcon label="Weight (kg)" icon="weight-kilogram" placeholder="70" keyboardType="numeric" value={form.weight} onChangeText={(t) => handleChange('weight', t)} error={errors.weight} />
+                                    </View>
+                                    <View style={styles.gridItem}>
+                                        <InputWithIcon label="Pulse (bpm)" icon="heart-flash" placeholder="72" keyboardType="numeric" value={form.pulse} onChangeText={(t) => handleChange('pulse', t)} error={errors.pulse} />
+                                    </View>
+                                </View>
                             </View>
-                            <View style={styles.gridItem}>
-                                <InputWithIcon label="Temp (°F)" icon="thermometer" placeholder="98.6" keyboardType="numeric" value={form.temperature} onChangeText={(t) => handleChange('temperature', t)} error={errors.temperature} />
-                            </View>
-                        </View>
-                        <View style={[styles.gridRow, { marginTop: 10 }]}>
-                            <View style={styles.gridItem}>
-                                <InputWithIcon label="Weight (kg)" icon="weight-kilogram" placeholder="70" keyboardType="numeric" value={form.weight} onChangeText={(t) => handleChange('weight', t)} error={errors.weight} />
-                            </View>
-                            <View style={styles.gridItem}>
-                                <InputWithIcon label="Pulse (bpm)" icon="heart-flash" placeholder="72" keyboardType="numeric" value={form.pulse} onChangeText={(t) => handleChange('pulse', t)} error={errors.pulse} />
-                            </View>
-                        </View>
+                        )}
                     </View>
 
                     {/* Diagnosis Card */}
@@ -310,6 +418,7 @@ const styles = StyleSheet.create({
         backgroundColor: COLORS.background,
     },
     scrollContent: {
+        flexGrow: 1,
         padding: SIZES.padding,
         paddingBottom: 100,
     },
@@ -352,19 +461,20 @@ const styles = StyleSheet.create({
     cardHeaderRow: {
         flexDirection: 'row',
         alignItems: 'center',
-        marginBottom: 15,
-        gap: 8
+        paddingBottom: 8, // Added padding to separate from content if expanded
+        justifyContent: 'space-between'
     },
-    cardTitle: {
-        fontSize: 16,
-        fontWeight: '700',
-        color: COLORS.primary,
-        textTransform: 'uppercase',
-        letterSpacing: 0.5
+    summaryText: {
+        fontSize: 12,
+        color: COLORS.secondary,
+        marginRight: 10,
+        maxWidth: '50%',
+        textAlign: 'right'
     },
     row: {
         flexDirection: 'row',
-        marginBottom: 5
+        marginBottom: 5,
+        marginTop: 5 // Added overlap adjustment
     },
     inputContainer: {
         marginBottom: 15

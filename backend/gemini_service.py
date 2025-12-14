@@ -24,10 +24,9 @@ generation_config = {
 }
 
 model = genai.GenerativeModel(
-    model_name="gemini-1.5-flash",
+    model_name="gemini-2.5-flash",
     generation_config=generation_config,
 )
-
 
 def analyze_prescription_text(text: str) -> dict:
     prompt = f"""
@@ -47,7 +46,7 @@ def analyze_prescription_text(text: str) -> dict:
           "frequency": "once daily / twice daily / as prescribed",
           "timing": "before/after meals, morning/evening, etc.",
           "duration": "duration of treatment",
-          "warnings": ["any safety warnings if applicable"]
+          "warnings": ["any safety warnings if applicable, including drug interactions"]
         }},
         ...
       ],
@@ -56,30 +55,62 @@ def analyze_prescription_text(text: str) -> dict:
         "completeness": integer 0-100,
         "safety": integer 0-100,
         "ambiguity": "low / medium / high",
-        "overall_rating": "Good / Moderate / Needs Correction"
-      }}
+        "overall_rating": "Excellent / Good / Moderate / Needs Correction / Poor"
+      }},
+      "summary": "Brief 2-3 sentence summary of the prescription quality",
+      "recommendations": ["List of specific improvements or precautions if any"],
+      "drug_interactions": ["Identify any potential drug-drug interactions if multiple medicines"]
     }}
 
     3. Rules:
        - Expand shorthand medicine names into full names if known.
-       - Fill in missing dosage, frequency, timing, and duration if inferred from context, otherwise mark as "unknown" or leave blank appropriately.
+       - Fill in missing frequency, timing, and duration if inferred from context, otherwise mark as "unknown".
        - Add warnings if medicine is unknown or dose seems unsafe.
-       - If a 'Diagnosis' is provided in the text, use it to cross-check the prescribed medicines. Add warnings if a medicine seems contraindicated for the diagnosis or unrelated.
-       - If 'Diagnosis' is present, check for standard treatments associated with it and consider this in the completeness score.
+       - Check for drug-drug interactions if multiple medicines are prescribed.
+       - If a 'Diagnosis' is provided in the text, use it to cross-check the prescribed medicines. Add warnings if a medicine seems contraindicated or unrelated.
+       - Consider patient age and vitals in your safety assessment.
+       - If 'Diagnosis' is present, check for standard treatments and consider this in the completeness score.
+       - Score should be: 90-100 (Excellent), 80-89 (Good), 60-79 (Moderate), 40-59 (Needs Correction), 0-39 (Poor)
        - Respond ONLY in JSON.
        - Maintain field names exactly as specified.
     """
 
     try:
         response = model.generate_content(prompt)
+        
+        # Check if response is empty
+        if not response or not response.text:
+            return {"error": "AI returned empty response"}
+        
         # Parse the response text as JSON
         json_response = json.loads(response.text)
+        
+        # Validate that required fields exist
+        if "structured_prescription" not in json_response or "score" not in json_response:
+            return {
+                "error": "AI response missing required fields",
+                "raw_response": response.text
+            }
+        
+        # Ensure score is in valid range
+        if "score" in json_response:
+            json_response["score"] = max(0, min(100, json_response["score"]))
+        
         return json_response
-    except json.JSONDecodeError:
+        
+    except json.JSONDecodeError as e:
         # Fallback or error handling if model returns malformed JSON
         return {
-            "error": "Failed to parse AI response",
-            "raw_response": response.text
+            "error": f"Failed to parse AI response: {str(e)}",
+            "raw_response": response.text if response else "No response"
         }
+    except AttributeError as e:
+        # Handle cases where response object doesn't have expected attributes
+        return {"error": f"Invalid API response structure: {str(e)}"}
     except Exception as e:
-        return {"error": str(e)}
+        # Catch all other exceptions
+        error_str = str(e)
+        # Check for specific API key error
+        if "403" in error_str or "leaked" in error_str.lower():
+            return {"error": "403 Your API key was reported as leaked. Please use another API key."}
+        return {"error": f"AI service error: {error_str}"}

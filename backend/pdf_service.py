@@ -58,7 +58,10 @@ def generate_prescription_pdf(data: dict) -> BytesIO:
         
         for med in medicines:
             # Format warnings
-            warnings = ", ".join(med.get('warnings', []))
+            warnings_list = med.get('warnings', [])
+            if isinstance(warnings_list, str):
+                warnings_list = [warnings_list]
+            warnings = ", ".join(warnings_list) if isinstance(warnings_list, list) else str(warnings_list)
             
             row = [
                 med.get('medicine_name', 'Unknown'),

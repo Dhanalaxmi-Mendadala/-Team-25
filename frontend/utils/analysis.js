@@ -12,7 +12,7 @@ export const analyzePrescriptionWithAI = async (data) => {
         if (diagnosis) promptText += `Diagnosis: ${diagnosis}. `;
         promptText += `Medicines: `;
         medicines.forEach(m => {
-            promptText += `${m.name} ${m.dosage || ''} ${m.frequency || ''} ${m.duration || ''} (${m.notes || ''}) | `;
+            promptText += `${m.name} ${m.frequency || ''} ${m.duration || ''} (${m.notes || ''}) | `;
         });
 
         // 2. Call Backend API
