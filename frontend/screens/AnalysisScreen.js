@@ -52,13 +52,7 @@ const AnalysisScreen = ({ route, navigation }) => {
         fetchAnalysis();
     }, [data]);
 
-    const handleFinalize = async () => {
-        if (analysis && analysis.structured_prescription) {
-            await savePrescription(analysis.structured_prescription);
-            Alert.alert('Success', 'Prescription Saved to Records!');
-            navigation.navigate('Prescription');
-        }
-    };
+    
 
     const handleExportPdf = async () => {
         if (!analysis) {
