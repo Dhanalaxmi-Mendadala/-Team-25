@@ -90,4 +90,5 @@ def generate_prescription_pdf(data: dict) -> BytesIO:
 
     doc.build(elements)
     buffer.seek(0)
+    print(buffer)
     return buffer
