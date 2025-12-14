@@ -60,7 +60,10 @@ const AnalysisScreen = ({ route, navigation }) => {
     };
 
     const handleExportPdf = async () => {
-        if (!analysis) return;
+        if (!analysis) {
+            Alert.alert("No Analysis", "Please define a prescription first.");
+            return;
+        }
 
         try {
             setExporting(true);
@@ -74,7 +77,15 @@ const AnalysisScreen = ({ route, navigation }) => {
 
             if (!response.ok) {
                 const errorText = await response.text();
-                throw new Error(`Failed to generate PDF: ${response.status} - ${errorText}`);
+                // Extract useful error info if possible
+                let friendlyError = "Something went wrong on the server.";
+                try {
+                    const errObj = JSON.parse(errorText);
+                    if (errObj.detail) friendlyError = errObj.detail;
+                } catch (e) {
+                    friendlyError = errorText.substring(0, 100); // Limit length
+                }
+                throw new Error(`Server Error: ${friendlyError}`);
             }
 
             const data = await response.json();
@@ -93,12 +104,12 @@ const AnalysisScreen = ({ route, navigation }) => {
                     Alert.alert("Saved", `PDF saved to ${fileUri}`);
                 }
             } else {
-                throw new Error("No PDF data received from server");
+                throw new Error("Received invalid data from server (missing PDF).");
             }
 
         } catch (error) {
             console.error("Export API Error:", error);
-            Alert.alert("Export Failed", "Could not export PDF. Please check your connection and try again.");
+            Alert.alert("Export Failed", error.message || "Could not export PDF. Please check your connection.");
         } finally {
             setExporting(false);
         }

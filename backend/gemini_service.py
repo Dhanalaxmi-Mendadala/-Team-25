@@ -1,7 +1,10 @@
-import os
 import json
+import logging
 import google.generativeai as genai
 from dotenv import load_dotenv
+from pydantic import BaseModel, Field, ValidationError
+from typing import List, Optional
+
 
 load_dotenv()
 
@@ -13,6 +16,34 @@ if not API_KEY:
 print(f"DEBUG: Loaded API Key starting with: {API_KEY[:5]}...")
 
 genai.configure(api_key=API_KEY)
+
+# Configure Logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+# --- Pydantic Models for AI Output Validation ---
+class Medicine(BaseModel):
+    medicine_name: str
+    formulation: Optional[str] = "Unknown"
+    strength: Optional[str] = "Unknown"
+    frequency: Optional[str] = "Unknown"
+    timing: Optional[str] = "Unknown"
+    duration: Optional[str] = "Unknown"
+    warnings: List[str] = Field(default_factory=list)
+
+class Evaluation(BaseModel):
+    completeness: int = Field(ge=0, le=100)
+    safety: int = Field(ge=0, le=100)
+    ambiguity: str
+    overall_rating: str
+
+class PrescriptionAnalysis(BaseModel):
+    structured_prescription: List[Medicine]
+    score: int = Field(ge=0, le=100)
+    evaluation: Evaluation
+    summary: str
+    recommendations: List[str] = Field(default_factory=list)
+    drug_interactions: List[str] = Field(default_factory=list)
 
 # Generation config to enforce JSON response
 generation_config = {
@@ -76,41 +107,40 @@ def analyze_prescription_text(text: str) -> dict:
     """
 
     try:
+        logger.info("Sending request to Gemini AI...")
         response = model.generate_content(prompt)
         
         # Check if response is empty
         if not response or not response.text:
+            logger.error("AI returned empty response")
             return {"error": "AI returned empty response"}
         
         # Parse the response text as JSON
-        json_response = json.loads(response.text)
+        json_data = json.loads(response.text)
         
-        # Validate that required fields exist
-        if "structured_prescription" not in json_response or "score" not in json_response:
+        # --- GUARDRAIL 2: Validate against Pydantic Schema ---
+        try:
+            validated_data = PrescriptionAnalysis(**json_data)
+            logger.info(f"AI Analysis successful. Score: {validated_data.score}")
+            return validated_data.model_dump()
+        except ValidationError as ve:
+            logger.error(f"AI Response Validation Failed: {ve}")
+            # Optional: Implement Retry Logic here if critical
             return {
-                "error": "AI response missing required fields",
-                "raw_response": response.text
+                "error": "AI response failed structure validation", 
+                "details": str(ve),
+                "raw_response": json_data
             }
         
-        # Ensure score is in valid range
-        if "score" in json_response:
-            json_response["score"] = max(0, min(100, json_response["score"]))
-        
-        return json_response
-        
     except json.JSONDecodeError as e:
-        # Fallback or error handling if model returns malformed JSON
+        logger.error(f"JSON Decode Error: {e}")
         return {
             "error": f"Failed to parse AI response: {str(e)}",
             "raw_response": response.text if response else "No response"
         }
-    except AttributeError as e:
-        # Handle cases where response object doesn't have expected attributes
-        return {"error": f"Invalid API response structure: {str(e)}"}
     except Exception as e:
-        # Catch all other exceptions
+        logger.exception("AI Service Error")
         error_str = str(e)
-        # Check for specific API key error
         if "403" in error_str or "leaked" in error_str.lower():
             return {"error": "403 Your API key was reported as leaked. Please use another API key."}
         return {"error": f"AI service error: {error_str}"}
